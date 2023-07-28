@@ -1,0 +1,97 @@
+There are three basic expressions:
+	| constant litteral
+	| identifier
+	| function application
+
+to alter the flow of the program there's some syntactic sugar:
+	| f $ g $ x		= f(g(x)) // parenthesises the right hand side
+	| x |> f |> g 	= g(f(x)) // parenthesises the left side and swaps the order of operators
+
+combinators can be used to combine functions into point free expressions
+all combinators are left associative
+	| (f ° g) x		= f(g(x))
+	| (f % g) x		= g(f(x))
+	
+to declare a variable use the template `let pattern = type: expression;`
+	let initial = char: 'A';
+	let number = u8: 241;
+it's possible to destructure any type with a let as long as the pattern is always applicable
+	let (first, second) =: ('c', 0b01100101);
+	
+	// the below code generates 3 variables: 
+	// whole_point that represent the whole expression
+	// bottom that represent the x field in the expression
+	// y that represent the y field in the expression
+	let whole_point::Point(x: bottom, y) =: Point(x: 132, y: 123);
+
+
+there are three two type of executable for spillo
+	| functions
+	| proccesses
+	
+functions are declared with the let keyword and lambda calculus syntax
+	let add > u8 > u8 =: + #0 #1;
+	let mul > u8: first >: second =: * first second;
+the types of functions has the syntax of lambda calculus
+litteral functions have the syntax `\> pattern > pattern >> expr` and are themself expressions
+	let subtract = >u8>u8>>u8: (\ > first > second >> - first second);
+
+processes can only be declared at a top level with syntax `proc name >:params .. >> ret_type: expr;`
+processes unlike functions follow eager evaluation so every parameter passed is evaluated with the call
+processes cannot be called from withing functions but can be called from other processes
+	proc print >:s >>: c.pritf s;
+
+closures can be created by curring 
+	let n =: 8;
+	let add_n=: (\> n > p >> add n p) n;
+
+
+everything is immutable, only processes can induce side effects
+functions return values can be mutated by accessing it through the bang notation
+all return values start from the default value of a type
+	let Power >:base >:exponent =:
+		where exponent
+			=> 0: !1
+			=> 1: !base
+			=>> Power base (Sub exponent 1) 
+				|> Mul base 
+				|> !;
+
+
+
+`!func other params` changes the ret value while `func ! other param` doesnt
+if the ret type is a product type you can access the different fields with `![field_name]`
+the first notation is not allowed if the func ret type is different from the ret type of the whole function
+
+
+where expressions pattern match, particularly useful with sum types
+	where expr
+		=> pattern: {}
+		=> pattern: {}
+		=>> {};
+
+if exprsessions check if the expr is different from the type default {(bool: false), (int: 0), (char: 'EOF')}
+	if
+		-> expr: {}
+		-> expr: {}
+		->> {};
+
+loops take a product type with vars that'll be mutable in the loop body and a branching expression
+the loop terminates when the branching expression reaches a `else` branch
+the loop will execute the else branch and then terminate
+for this reason the value of a loop is the value in the else branch
+	let Power >: base >: exponent =: 	
+		!1,
+		loop (usize:counter) if 
+			-> Neq counter exponent: Increase counter, Mul ! base |> !;
+
+	
+there are types, which are static, and rules, which describe the relationship between types or of a type about itself
+	type product = (name:type, name:type);
+	type sum = |: type, | name: type, | name: type;
+
+
+the `|>` operator is left associative and swaps what's on the left with what's on the right
+the `$` operator is right associative and keeps the order of operations
+	2 $ 3 |> 4 == 2 (4 3)
+

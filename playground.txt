@@ -1,0 +1,9 @@
+type u8 = byte;
+type bool = |: false |: true;
+
+proc main >>: {
+	let Fib >: n =: if
+		-> Less n 2: n
+		->> Add (Sub n 2 |> Fib) (Sub n 1 |> Fib);
+
+	print $ Fib 6; }
