@@ -1,0 +1,96 @@
+context = 
+	| ident::{ declarations }
+	declarations = 
+		| expr
+		| let`patt<expr | mut`patt<expr,
+		| recur`patt<>expr | mut recur`patt<>expr
+		| rule`context,
+
+expr = 
+	| ident	
+
+	| (>patt1 >> expr) 
+	| expr expr1 | expr1.expr
+
+	| (expr & expr1)
+	| indexableExpr@indexExpr
+
+	| expr1 >patt >> epxr
+
+	| recur`patt<>expr
+
+	| (with expr
+		| >patt >> expr 
+		| >patt; patt<expr >> expr
+		| >> expr)
+	| (recur with expr
+		| >patt >> expr
+		| >patt; expr<patt >> expr
+		| >> expr)
+
+patt =
+	| _
+	| _type | _0type | _1type | _2type | _ntype
+	| const
+	| `ident
+
+	| `ident::patt
+	| (patt1 % ... % patt_n)
+	| (patt_n). ... .(patt1).funcident
+	| `ident:type
+
+type =
+	| * | # 
+	| U1 | U2 | ...
+	| word
+	| (^^patt % type) | (type1 & ... & type_n)
+	| (||patt . type) | (type1 -> ... -> type_n)
+
+general type rules:
+	(sort) - "a term has a type, a type has a kind, kinds and types are both in sort => x : * : # : U1 : U2 ..."
+		0 ]- * : # : U1 : U2 : U3 : ...
+
+	(var) - "Given a context if A is a sort then x:A is well typed"
+		T ]- A:s
+		T , x:A ]- x:A
+
+	(weak) - "Given a context, adding to it will not remove derivation possible from it"
+		T ]- A:B				T ]- C:s
+		T , x:C ]- A:B
+		if x isn't contained in T
+
+	(conv) - "If given a context with A:B and B':s then you can derive A:B' if B is beta reducible to B'"
+		T ]- A:B 				T ]- B':s
+		T ]- A:B'
+		if B is beta reductible to B'
+
+type rules dependent functions(as a negative type): 
+s is sort, minuscule are patterns, capitalised are any term
+T = context , ]- = derives , || = dependent function type , \ = lambda abstraction , T,+:^ ]- ° = by adding (+) of (^) to the context you can derive (°)
+	(form) - "If given a context and adding to it x:A you can derive B:s2, then you can abstract x from B with (||x:A . B):s2"
+		T ]- A:s1 				T , x:A ]- B:s2
+		T ]- (||x:A . B):s2
+		if 'x' isn't free in 'B'      (||x:A . B):s2 = (A -> B):s2
+		
+	(appl/elim) - "Given a context with M:(||x:A . B) and N:A then (M N) has sort B with every occurrence of x in it replaced with N"
+		T , x:A ]- Y:B                  T ]- M:(||x:A . B)	T ]- N:A
+		T ]- (N.M):B[N/x]				T ]- (M N):B[N/x]
+
+	(abst/intro) - "If given a context and adding x:A to it you can derive M:B and (||x:A . B) is a sort then (\x:A . M) has sort (||x:A . B)"
+		T , x:A ]- M:B			T ]- (||x:A . B):s
+		T ]- (>x:A >> M):(||x:A . B)	
+
+
+type rules dependent pair(as a negative type):
+	(form) -  "If given a context and adding to it x:A you can derive B:s2, then you can abstract x from B with (^^x:A % B):s2"
+		T ]- A:s1 				T , x:A ]- B:s2
+		T ]- (^^x:A % B):s2
+		if 'x' isn't free in 'B'      (^^x:A % B):s2 = (A & B):s2
+
+	(partition/elim) - "If given a contex in which M:(^^x:A % B) than the first element has type A, the second has type B with every x replaced with the first elemetn, and M can be evaulated to (A & evaluated type of B) when the first element is known"
+		T ]- M:(^^x:A % B)
+		T ]- M@1:A  			T ]- M@2:B[M@0/x] 			T ]- M@0:(A & B[M@1/x])
+
+	(intro) - "If given a context and adding x:A to it you can derive M:B and (^^x:A % B) is a sort then (A`x & M) has type (^^x:A % B)"
+		T , x:A	]- Y:B			T ]- (^^x:A % B):s
+		T ]- (x >`x & Y):(^^x:A % B)  	T ]- (x & Y):(^^x:A % B)

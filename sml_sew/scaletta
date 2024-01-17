@@ -1,0 +1,23 @@
+compile
+	readfile
+	interpret program
+		split string into tokens
+			keywords
+			symbols
+			identifiers
+		build ast from tokens
+			expressions
+				lambda terms
+				constants
+				identifiers
+				constructor
+				definition = (\f = x)
+				replacement = (\f := x)
+			declarations
+				modules
+				application abstraction
+			pattern
+				product type
+				sum type
+				dependent type
+	generate executable

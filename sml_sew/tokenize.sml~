@@ -1,0 +1,7 @@
+datatype Token =
+	 Word
+       | Symbol
+       | Keyword
+
+	    
+datatype TokenMeta = {t:Token, s:string, line:int, column:int}

@@ -1,9 +1,14 @@
-type u8 = byte;
-type bool = |: false |: true;
+pitfall::{
+	`bool[T:s]:set { x | x: T -> T -> T } <
+	{ `true < (>n1 >n2 >> n1)
+	; `false< (>n1 >n2 >> n2) },
 
-proc main >>: {
-	let Fib >: n =: if
-		-> Less n 2: n
-		->> Add (Sub n 2 |> Fib) (Sub n 1 |> Fib);
-
-	print $ Fib 6; }
+	`If[T1:*; T2:*]: ||b:bool . T1 -> T2 -> b T1 T2 <
+		(>b where
+		| true >> (>n1 >n2 >> n1)
+		| false >> (>n1 >n2 >> n2)),
+	`nat:* where
+		| `zero:nat
+		| `succ:nat -> nat,
+	`Double: Nat -> Nat
+}
