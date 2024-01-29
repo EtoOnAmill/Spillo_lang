@@ -9,13 +9,17 @@ use lexer::lex;
 fn main() {
     let pseudo_program = 
     "main::{
-    recur`fib:(Nat -> Nat)<>
-    (>`n >>
+    `Fib:(Nat.Nat)<
+    (>`n;
     recur with (n & Sub n 1)
-        | > (`acc, (`next).Succ) >> (Mul acc next & next))";
+        | > (`acc, (`next).Succ) ; (Mul acc next & next)),
+    `fib3< Fib 3
+    }";
     let token_vec = lex(pseudo_program);
 
-    println!("{:?}", token_vec);
+    for token in &token_vec {
+        println!("{:?}", token);
+    }
     for token in &token_vec {
         print!("{} ", token);
     }

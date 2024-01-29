@@ -8,42 +8,42 @@ context =
 expr =
 	| ident
 
-	| (>patt1 >> expr)
+	| (>patt1 ; expr)
 	| expr expr1 | expr1.expr
 
 	| (expr & expr1)
 	| indexableExpr@indexExpr
 
-	| expr1 >patt >> epxr
+	| expr1 >patt1 ; epxr
+	| expr1 >. epxr
 
 	| recur patt<>expr
 
 	| (with expr
-		| >patt >> expr
-		| >patt; patt<expr >> expr
-		| >> expr)
+		| >patt ; expr
+		| >patt & (patt<expr) ; expr
+		| expr)
 	| (recur with expr
-		| >patt >> expr
-		| >patt; expr<patt >> expr
-		| >> expr)
-
+		| >patt ; expr
+		| >patt & (patt<expr) ; expr
+		| expr)
 patt =
 	| _
 	| _type | _0type | ... | _ntype
 	| const
 	| `word
+	| patt:type
 
 	| `word::patt
 	| (patt1 % patt2)
 	| (patt2).patt1 // (parameter).inductive_data
-	| patt:type
 
 type =
 	| * | #
 	| U1 | U2 | ...
 	| word
-	| (^^patt % type) | (type1 & type2)
-	| (||patt . type) | (type1 -> type2)
+	| (^^patt % type) | (type1 % type2)
+	| (||patt . type) | (type1 . type2)
 
 general type rules:
 	(sort) - "a term has a type, a type has a kind, kinds and types are both in sort => x : * : # : U1 : U2 ..."

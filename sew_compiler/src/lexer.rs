@@ -107,7 +107,7 @@ pub enum Symbol {
     Type, // *
     SetOfAll, // #
     Percent, // %
-    Arrow, // ->
+    Pipe, // ->
     Dot, // .
     Backtick // `
 }
@@ -132,7 +132,7 @@ impl Symbol {
             Symbol::Comma => ",".to_owned(),
             Symbol::Ampersand => "&".to_owned(),
             Symbol::Percent => "%".to_owned(),
-            Symbol::Arrow => "->".to_owned(),
+            Symbol::Pipe => "|".to_owned(),
             Symbol::Dot => ".".to_owned(),
             Symbol::Backtick => "`".to_owned(),
             Symbol::Type => "*".to_owned(),
@@ -146,7 +146,7 @@ pub fn tokenize_symbol(i: CharIter, cursor: Position) -> TokenGroup {
     let adv = cursor.advance(1);
 
     match vec[0..] {
-        ['-', '>', ..] => (Token::Symbol(Symbol::Arrow, cursor), i.skip(2), adv.advance(1)),
+        ['|', ..] => (Token::Symbol(Symbol::Pipe, cursor), i.skip(1), adv),
         ['>', '>', ..] => (Token::Symbol(Symbol::Return, cursor), i.skip(2), adv.advance(1)),
         [';', ..] => (Token::Symbol(Symbol::Semicolon, cursor), i.skip(1), adv),
         [',', ..] => (Token::Symbol(Symbol::Comma, cursor), i.skip(1), adv),
@@ -176,6 +176,7 @@ pub fn tokenize_symbol(i: CharIter, cursor: Position) -> TokenGroup {
 #[derive(Debug)]
 pub enum Keyword {
     Let,
+    Mut,
     Recur,
     Inf,
     With,
@@ -186,6 +187,7 @@ impl Keyword {
     pub fn to_string(&self) -> String {
         match self {
             Keyword::Let => "let".to_owned(),
+            Keyword::Mut => "mut".to_owned(),
             Keyword::Recur => "recur".to_owned(),
             Keyword::Inf => "inf".to_owned(),
             Keyword::With => "with".to_owned(),
@@ -194,12 +196,13 @@ impl Keyword {
     }
 }
 pub fn tokenize_word(i: CharIter, cursor:Position) -> TokenGroup {
-    let (vec, iter) = i.take_while(|c| c.is_alphabetic() || *c == '_');
+    let (vec, iter) = i.take_while(|c| c.is_alphanumeric() || *c == '_');
     let new_cursor = cursor.advance(vec.len());
     let word: String = vec.into_iter().collect();
 
     match word.as_str() {
         "let" => (Token::Keyword(Keyword::Let, cursor), iter, new_cursor),
+        "mut" => (Token::Keyword(Keyword::Mut, cursor), iter, new_cursor),
         "recur" => (Token::Keyword(Keyword::Recur, cursor), iter, new_cursor),
         "inf" => (Token::Keyword(Keyword::Inf, cursor), iter, new_cursor),
         "with" => (Token::Keyword(Keyword::With, cursor), iter, new_cursor),

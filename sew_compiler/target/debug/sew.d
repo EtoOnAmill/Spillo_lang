@@ -1,1 +1,1 @@
-/home/etonit/Spillo_lang/sew/target/debug/sew: /home/etonit/Spillo_lang/sew/src/lexer.rs /home/etonit/Spillo_lang/sew/src/lib.rs /home/etonit/Spillo_lang/sew/src/main.rs
+/home/etonit/Spillo_lang/sew_compiler/target/debug/sew: /home/etonit/Spillo_lang/sew_compiler/src/lexer.rs /home/etonit/Spillo_lang/sew_compiler/src/lib.rs /home/etonit/Spillo_lang/sew_compiler/src/main.rs
