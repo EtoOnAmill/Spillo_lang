@@ -47,9 +47,9 @@ ident:
     | 'y'
 ;
 declaration:
-    "recur" patt "<>" expr
-    patt "<" expr
-    expr ">" patt
+    | "recur" patt "<>" expr declaration
+    | patt "<" expr declaration
+    | expr ">" patt declaration
 ;
 %%
 

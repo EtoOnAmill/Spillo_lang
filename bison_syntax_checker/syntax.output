@@ -42,7 +42,10 @@ Grammar
    34      | 'x'
    35      | 'y'
 
-   36 declaration: "recur" patt "<>" expr patt "<" expr expr ">" patt
+   36 declaration: ε
+   37            | "recur" patt "<>" expr declaration
+   38            | patt "<" expr declaration
+   39            | expr ">" patt declaration
 
 
 Terminals, with rules where they appear
@@ -80,10 +83,10 @@ Terminals, with rules where they appear
     "with" (258) 14
     "recur with" (259) 15
     "::" (260) 24
-    "recur" (261) 36
-    "<>" (262) 36
-    "<" (263) 36
-    ">" (264) 36
+    "recur" (261) 37
+    "<>" (262) 37
+    "<" (263) 38
+    ">" (264) 39
 
 
 Nonterminals, with rules where they appear
@@ -92,13 +95,13 @@ Nonterminals, with rules where they appear
         on left: 0
     expr (39)
         on left: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
-        on right: 0 8 9 10 11 12 13 14 15 17 18 19 36
+        on right: 0 8 9 10 11 12 13 14 15 17 18 19 37 38 39
     branch (40)
         on left: 16 17 18 19
         on right: 14 15 17 18
     patt (41)
         on left: 20 21 22 23 24 25 26
-        on right: 8 9 17 18 23 24 25 26 36
+        on right: 8 9 17 18 23 24 25 26 37 38 39
     type (42)
         on left: 27 28
         on right: 21 23
@@ -106,8 +109,8 @@ Nonterminals, with rules where they appear
         on left: 29 30 31 32 33 34 35
         on right: 1 22 24
     declaration (44)
-        on left: 36
-        on right: 18
+        on left: 36 37 38 39
+        on right: 18 37 38 39
 
 
 State 0
@@ -997,9 +1000,30 @@ State 73
 
    18 branch: '|' '>' patt '&' '(' • declaration ')' ';' expr branch
 
-    "recur"  shift, and go to state 76
+    '0'      shift, and go to state 1
+    '1'      shift, and go to state 2
+    '2'      shift, and go to state 3
+    '3'      shift, and go to state 4
+    '4'      shift, and go to state 5
+    '5'      shift, and go to state 6
+    '('      shift, and go to state 76
+    '_'      shift, and go to state 27
+    '`'      shift, and go to state 28
+    'a'      shift, and go to state 8
+    'b'      shift, and go to state 9
+    'c'      shift, and go to state 10
+    'd'      shift, and go to state 11
+    'e'      shift, and go to state 12
+    'x'      shift, and go to state 13
+    'y'      shift, and go to state 14
+    "recur"  shift, and go to state 77
 
-    declaration  go to state 77
+    $default  reduce using rule 36 (declaration)
+
+    expr         go to state 78
+    patt         go to state 79
+    ident        go to state 16
+    declaration  go to state 80
 
 
 State 74
@@ -1018,169 +1042,135 @@ State 75
 
 State 76
 
-   36 declaration: "recur" • patt "<>" expr patt "<" expr expr ">" patt
+    8 expr: '(' • '>' patt ';' expr ')'
+   12     | '(' • expr '&' expr ')'
+   14     | '(' • "with" expr branch ')'
+   15     | '(' • "recur with" expr branch ')'
+   25 patt: '(' • patt '%' patt ')'
+   26     | '(' • '(' patt ')' '.' patt ')'
+
+    '>'           shift, and go to state 17
+    '0'           shift, and go to state 1
+    '1'           shift, and go to state 2
+    '2'           shift, and go to state 3
+    '3'           shift, and go to state 4
+    '4'           shift, and go to state 5
+    '5'           shift, and go to state 6
+    '('           shift, and go to state 81
+    "with"        shift, and go to state 18
+    "recur with"  shift, and go to state 19
+    '_'           shift, and go to state 27
+    '`'           shift, and go to state 28
+    'a'           shift, and go to state 8
+    'b'           shift, and go to state 9
+    'c'           shift, and go to state 10
+    'd'           shift, and go to state 11
+    'e'           shift, and go to state 12
+    'x'           shift, and go to state 13
+    'y'           shift, and go to state 14
+
+    expr   go to state 20
+    patt   go to state 38
+    ident  go to state 16
+
+
+State 77
+
+   37 declaration: "recur" • patt "<>" expr declaration
 
     '('  shift, and go to state 26
     '_'  shift, and go to state 27
     '`'  shift, and go to state 28
 
-    patt  go to state 78
-
-
-State 77
-
-   18 branch: '|' '>' patt '&' '(' declaration • ')' ';' expr branch
-
-    ')'  shift, and go to state 79
+    patt  go to state 82
 
 
 State 78
 
-   36 declaration: "recur" patt • "<>" expr patt "<" expr expr ">" patt
+    9 expr: expr • '>' patt ';' expr
+   10     | expr • ' ' expr
+   11     | expr • '.' expr
+   13     | expr • '@' expr
+   39 declaration: expr • ">" patt declaration
 
-    "<>"  shift, and go to state 80
+    '.'  shift, and go to state 22
+    '@'  shift, and go to state 23
+    ' '  shift, and go to state 24
+    '>'  shift, and go to state 25
+    ">"  shift, and go to state 83
 
 
 State 79
 
-   18 branch: '|' '>' patt '&' '(' declaration ')' • ';' expr branch
+   38 declaration: patt • "<" expr declaration
 
-    ';'  shift, and go to state 81
+    "<"  shift, and go to state 84
 
 
 State 80
 
-   36 declaration: "recur" patt "<>" • expr patt "<" expr expr ">" patt
+   18 branch: '|' '>' patt '&' '(' declaration • ')' ';' expr branch
 
-    '0'  shift, and go to state 1
-    '1'  shift, and go to state 2
-    '2'  shift, and go to state 3
-    '3'  shift, and go to state 4
-    '4'  shift, and go to state 5
-    '5'  shift, and go to state 6
-    '('  shift, and go to state 7
-    'a'  shift, and go to state 8
-    'b'  shift, and go to state 9
-    'c'  shift, and go to state 10
-    'd'  shift, and go to state 11
-    'e'  shift, and go to state 12
-    'x'  shift, and go to state 13
-    'y'  shift, and go to state 14
-
-    expr   go to state 82
-    ident  go to state 16
+    ')'  shift, and go to state 85
 
 
 State 81
 
-   18 branch: '|' '>' patt '&' '(' declaration ')' ';' • expr branch
+    8 expr: '(' • '>' patt ';' expr ')'
+   12     | '(' • expr '&' expr ')'
+   14     | '(' • "with" expr branch ')'
+   15     | '(' • "recur with" expr branch ')'
+   25 patt: '(' • patt '%' patt ')'
+   26     | '(' • '(' patt ')' '.' patt ')'
+   26     | '(' '(' • patt ')' '.' patt ')'
 
-    '0'  shift, and go to state 1
-    '1'  shift, and go to state 2
-    '2'  shift, and go to state 3
-    '3'  shift, and go to state 4
-    '4'  shift, and go to state 5
-    '5'  shift, and go to state 6
-    '('  shift, and go to state 7
-    'a'  shift, and go to state 8
-    'b'  shift, and go to state 9
-    'c'  shift, and go to state 10
-    'd'  shift, and go to state 11
-    'e'  shift, and go to state 12
-    'x'  shift, and go to state 13
-    'y'  shift, and go to state 14
+    '>'           shift, and go to state 17
+    '0'           shift, and go to state 1
+    '1'           shift, and go to state 2
+    '2'           shift, and go to state 3
+    '3'           shift, and go to state 4
+    '4'           shift, and go to state 5
+    '5'           shift, and go to state 6
+    '('           shift, and go to state 81
+    "with"        shift, and go to state 18
+    "recur with"  shift, and go to state 19
+    '_'           shift, and go to state 27
+    '`'           shift, and go to state 28
+    'a'           shift, and go to state 8
+    'b'           shift, and go to state 9
+    'c'           shift, and go to state 10
+    'd'           shift, and go to state 11
+    'e'           shift, and go to state 12
+    'x'           shift, and go to state 13
+    'y'           shift, and go to state 14
 
-    expr   go to state 83
+    expr   go to state 20
+    patt   go to state 50
     ident  go to state 16
 
 
 State 82
 
-    9 expr: expr • '>' patt ';' expr
-   10     | expr • ' ' expr
-   11     | expr • '.' expr
-   13     | expr • '@' expr
-   36 declaration: "recur" patt "<>" expr • patt "<" expr expr ">" patt
+   37 declaration: "recur" patt • "<>" expr declaration
 
-    '.'  shift, and go to state 22
-    '@'  shift, and go to state 23
-    ' '  shift, and go to state 24
-    '>'  shift, and go to state 25
-    '('  shift, and go to state 26
-    '_'  shift, and go to state 27
-    '`'  shift, and go to state 28
-
-    patt  go to state 84
+    "<>"  shift, and go to state 86
 
 
 State 83
 
-    9 expr: expr • '>' patt ';' expr
-   10     | expr • ' ' expr
-   11     | expr • '.' expr
-   13     | expr • '@' expr
-   18 branch: '|' '>' patt '&' '(' declaration ')' ';' expr • branch
+   39 declaration: expr ">" • patt declaration
 
-    '.'  shift, and go to state 22
-    '@'  shift, and go to state 23
-    ' '  shift, and go to state 24
-    '>'  shift, and go to state 25
-    '|'  shift, and go to state 45
+    '('  shift, and go to state 26
+    '_'  shift, and go to state 27
+    '`'  shift, and go to state 28
 
-    $default  reduce using rule 16 (branch)
-
-    branch  go to state 85
+    patt  go to state 87
 
 
 State 84
 
-   36 declaration: "recur" patt "<>" expr patt • "<" expr expr ">" patt
+   38 declaration: patt "<" • expr declaration
 
-    "<"  shift, and go to state 86
-
-
-State 85
-
-   18 branch: '|' '>' patt '&' '(' declaration ')' ';' expr branch •
-
-    $default  reduce using rule 18 (branch)
-
-
-State 86
-
-   36 declaration: "recur" patt "<>" expr patt "<" • expr expr ">" patt
-
-    '0'  shift, and go to state 1
-    '1'  shift, and go to state 2
-    '2'  shift, and go to state 3
-    '3'  shift, and go to state 4
-    '4'  shift, and go to state 5
-    '5'  shift, and go to state 6
-    '('  shift, and go to state 7
-    'a'  shift, and go to state 8
-    'b'  shift, and go to state 9
-    'c'  shift, and go to state 10
-    'd'  shift, and go to state 11
-    'e'  shift, and go to state 12
-    'x'  shift, and go to state 13
-    'y'  shift, and go to state 14
-
-    expr   go to state 87
-    ident  go to state 16
-
-
-State 87
-
-    9 expr: expr • '>' patt ';' expr
-   10     | expr • ' ' expr
-   11     | expr • '.' expr
-   13     | expr • '@' expr
-   36 declaration: "recur" patt "<>" expr patt "<" expr • expr ">" patt
-
-    '.'  shift, and go to state 22
-    '@'  shift, and go to state 23
-    ' '  shift, and go to state 24
-    '>'  shift, and go to state 25
     '0'  shift, and go to state 1
     '1'  shift, and go to state 2
     '2'  shift, and go to state 3
@@ -1200,34 +1190,207 @@ State 87
     ident  go to state 16
 
 
+State 85
+
+   18 branch: '|' '>' patt '&' '(' declaration ')' • ';' expr branch
+
+    ';'  shift, and go to state 89
+
+
+State 86
+
+   37 declaration: "recur" patt "<>" • expr declaration
+
+    '0'  shift, and go to state 1
+    '1'  shift, and go to state 2
+    '2'  shift, and go to state 3
+    '3'  shift, and go to state 4
+    '4'  shift, and go to state 5
+    '5'  shift, and go to state 6
+    '('  shift, and go to state 7
+    'a'  shift, and go to state 8
+    'b'  shift, and go to state 9
+    'c'  shift, and go to state 10
+    'd'  shift, and go to state 11
+    'e'  shift, and go to state 12
+    'x'  shift, and go to state 13
+    'y'  shift, and go to state 14
+
+    expr   go to state 90
+    ident  go to state 16
+
+
+State 87
+
+   39 declaration: expr ">" patt • declaration
+
+    '0'      shift, and go to state 1
+    '1'      shift, and go to state 2
+    '2'      shift, and go to state 3
+    '3'      shift, and go to state 4
+    '4'      shift, and go to state 5
+    '5'      shift, and go to state 6
+    '('      shift, and go to state 76
+    '_'      shift, and go to state 27
+    '`'      shift, and go to state 28
+    'a'      shift, and go to state 8
+    'b'      shift, and go to state 9
+    'c'      shift, and go to state 10
+    'd'      shift, and go to state 11
+    'e'      shift, and go to state 12
+    'x'      shift, and go to state 13
+    'y'      shift, and go to state 14
+    "recur"  shift, and go to state 77
+
+    $default  reduce using rule 36 (declaration)
+
+    expr         go to state 78
+    patt         go to state 79
+    ident        go to state 16
+    declaration  go to state 91
+
+
 State 88
 
     9 expr: expr • '>' patt ';' expr
    10     | expr • ' ' expr
    11     | expr • '.' expr
    13     | expr • '@' expr
-   36 declaration: "recur" patt "<>" expr patt "<" expr expr • ">" patt
+   38 declaration: patt "<" expr • declaration
+
+    '.'      shift, and go to state 22
+    '@'      shift, and go to state 23
+    ' '      shift, and go to state 24
+    '>'      shift, and go to state 25
+    '0'      shift, and go to state 1
+    '1'      shift, and go to state 2
+    '2'      shift, and go to state 3
+    '3'      shift, and go to state 4
+    '4'      shift, and go to state 5
+    '5'      shift, and go to state 6
+    '('      shift, and go to state 76
+    '_'      shift, and go to state 27
+    '`'      shift, and go to state 28
+    'a'      shift, and go to state 8
+    'b'      shift, and go to state 9
+    'c'      shift, and go to state 10
+    'd'      shift, and go to state 11
+    'e'      shift, and go to state 12
+    'x'      shift, and go to state 13
+    'y'      shift, and go to state 14
+    "recur"  shift, and go to state 77
+
+    $default  reduce using rule 36 (declaration)
+
+    expr         go to state 78
+    patt         go to state 79
+    ident        go to state 16
+    declaration  go to state 92
+
+
+State 89
+
+   18 branch: '|' '>' patt '&' '(' declaration ')' ';' • expr branch
+
+    '0'  shift, and go to state 1
+    '1'  shift, and go to state 2
+    '2'  shift, and go to state 3
+    '3'  shift, and go to state 4
+    '4'  shift, and go to state 5
+    '5'  shift, and go to state 6
+    '('  shift, and go to state 7
+    'a'  shift, and go to state 8
+    'b'  shift, and go to state 9
+    'c'  shift, and go to state 10
+    'd'  shift, and go to state 11
+    'e'  shift, and go to state 12
+    'x'  shift, and go to state 13
+    'y'  shift, and go to state 14
+
+    expr   go to state 93
+    ident  go to state 16
+
+
+State 90
+
+    9 expr: expr • '>' patt ';' expr
+   10     | expr • ' ' expr
+   11     | expr • '.' expr
+   13     | expr • '@' expr
+   37 declaration: "recur" patt "<>" expr • declaration
+
+    '.'      shift, and go to state 22
+    '@'      shift, and go to state 23
+    ' '      shift, and go to state 24
+    '>'      shift, and go to state 25
+    '0'      shift, and go to state 1
+    '1'      shift, and go to state 2
+    '2'      shift, and go to state 3
+    '3'      shift, and go to state 4
+    '4'      shift, and go to state 5
+    '5'      shift, and go to state 6
+    '('      shift, and go to state 76
+    '_'      shift, and go to state 27
+    '`'      shift, and go to state 28
+    'a'      shift, and go to state 8
+    'b'      shift, and go to state 9
+    'c'      shift, and go to state 10
+    'd'      shift, and go to state 11
+    'e'      shift, and go to state 12
+    'x'      shift, and go to state 13
+    'y'      shift, and go to state 14
+    "recur"  shift, and go to state 77
+
+    $default  reduce using rule 36 (declaration)
+
+    expr         go to state 78
+    patt         go to state 79
+    ident        go to state 16
+    declaration  go to state 94
+
+
+State 91
+
+   39 declaration: expr ">" patt declaration •
+
+    $default  reduce using rule 39 (declaration)
+
+
+State 92
+
+   38 declaration: patt "<" expr declaration •
+
+    $default  reduce using rule 38 (declaration)
+
+
+State 93
+
+    9 expr: expr • '>' patt ';' expr
+   10     | expr • ' ' expr
+   11     | expr • '.' expr
+   13     | expr • '@' expr
+   18 branch: '|' '>' patt '&' '(' declaration ')' ';' expr • branch
 
     '.'  shift, and go to state 22
     '@'  shift, and go to state 23
     ' '  shift, and go to state 24
     '>'  shift, and go to state 25
-    ">"  shift, and go to state 89
+    '|'  shift, and go to state 45
+
+    $default  reduce using rule 16 (branch)
+
+    branch  go to state 95
 
 
-State 89
+State 94
 
-   36 declaration: "recur" patt "<>" expr patt "<" expr expr ">" • patt
+   37 declaration: "recur" patt "<>" expr declaration •
 
-    '('  shift, and go to state 26
-    '_'  shift, and go to state 27
-    '`'  shift, and go to state 28
-
-    patt  go to state 90
+    $default  reduce using rule 37 (declaration)
 
 
-State 90
+State 95
 
-   36 declaration: "recur" patt "<>" expr patt "<" expr expr ">" patt •
+   18 branch: '|' '>' patt '&' '(' declaration ')' ';' expr branch •
 
-    $default  reduce using rule 36 (declaration)
+    $default  reduce using rule 18 (branch)
