@@ -1,3 +1,15 @@
+||x:A . B 
+f:(||`x:A.B) < (>x; x x)
+f:(#`x:A.B) < (>x; x x)
+f:(A!`x:A.B) < (>x; x x)
+f:(A . B) < (>x; x x)
+
+^^x:A % B
+p:(^^`x:A % B) < (x & x x)
+p:(#`x:A & B) < (x & x x)
+p:(E!`x:A % B) < (x & x x)
+p:(A & B) < (x & x x)
+
 context =
 	| ident::{ declarations }
 	declarations =
@@ -17,7 +29,7 @@ expr =
 	| expr1 >patt1 ; epxr
 	| expr1 >. epxr
 
-	| recur patt<>expr
+	| (recur patt<>expr)
 
 	| (with expr
 		| >patt ; expr
@@ -34,15 +46,15 @@ patt =
 	| `word
 	| patt:type
 
-	| `word::patt
-	| (patt1 % patt2)
+	| patt::patt
+	| (patt1 & patt2)
 	| (patt2).patt1 // (parameter).inductive_data
 
 type =
 	| * | #
 	| U1 | U2 | ...
 	| word
-	| (^^patt % type) | (type1 % type2)
+	| (^^patt & type) | (type1 & type2)
 	| (||patt . type) | (type1 . type2)
 
 general type rules:
@@ -69,7 +81,7 @@ T = context , ]- = derives , || = dependent function type , \ = lambda abstracti
 	(form) - "If given a context and adding to it x:A you can derive B:s2, then you can abstract x from B with (||x:A . B):s2"
 		T ]- A:s1 				T , x:A ]- B:s2
 		T ]- (||x:A . B):s2
-		if 'x' isn't free in 'B'      (||x:A . B):s2 = (A -> B):s2
+		if 'x' isn't free in 'B'      (||x:A . B):s2 = (A . B):s2
 		
 	(appl/elim) - "Given a context with M:(||x:A . B) and N:A then (M N) has sort B with every occurrence of x in it replaced with N"
 		T , x:A ]- Y:B                  T ]- M:(||x:A . B)	T ]- N:A
@@ -77,14 +89,14 @@ T = context , ]- = derives , || = dependent function type , \ = lambda abstracti
 
 	(abst/intro) - "If given a context and adding x:A to it you can derive M:B and (||x:A . B) is a sort then (\x:A . M) has sort (||x:A . B)"
 		T , x:A ]- M:B			T ]- (||x:A . B):s
-		T ]- (>x:A >> M):(||x:A . B)	
+		T ]- (>x:A; M):(||x:A . B)	
 
 
 type rules dependent pair(as a negative type):
 	(form) -  "If given a context and adding to it x:A you can derive B:s2, then you can abstract x from B with (^^x:A % B):s2"
 		T ]- A:s1 				T , x:A ]- B:s2
-		T ]- (^^x:A % B):s2
-		if 'x' isn't free in 'B'      (^^x:A % B):s2 = (A & B):s2
+		T ]- (^^x:A & B):s2
+		if 'x' isn't free in 'B'      (^^x:A & B):s2 = (A & B):s2
 
 	(partition/elim) - "If given a contex in which M:(^^x:A % B) than the first element has type A, the second has type B with every x replaced with the first elemetn, and M can be evaulated to (A & evaluated type of B) when the first element is known"
 		T ]- M:(^^x:A % B)

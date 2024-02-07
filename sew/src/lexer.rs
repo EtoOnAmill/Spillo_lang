@@ -33,9 +33,54 @@ impl fmt::Display for Token {
     }
 }
 
+#[derive(Clone)]
 pub struct TokenIter<'a> {
-    s: CharIter<'a>,
+    source: CharIter<'a>,
     cursor: Position,
+}
+impl<'a> TokenIter<'a> {
+    pub fn new(s:&'a str) -> Self {
+        Self {
+            source: CharIter::new(s),
+            cursor: Position{ line:0, column: 0 }
+        }
+    }
+    fn from(source:CharIter<'a>, cursor: Position) -> Self {
+        Self {
+            source,
+            cursor
+        }
+    }
+}
+impl Iter for TokenIter<'_> {
+    type Val = Token;
+    fn next(&self) -> (Option<<Self as Iter>::Val>, Self) {
+        let mut cursor = self.cursor.clone();
+        
+        let (Some(chr), mut next_iter) = self.source.next() else { return (None, self.clone()); };
+
+        if chr.is_alphabetic() || chr == '_' {
+            let token;
+            (token, next_iter, cursor) = tokenize_word(self.source.clone(), cursor);
+            (Some(token), TokenIter::from(next_iter, cursor))
+        } else if chr.is_numeric() {
+            let token;
+            (token, next_iter, cursor) = tokenize_number(self.source.clone(), cursor);
+            (Some(token), TokenIter::from(next_iter, cursor))
+        } else if !chr.is_whitespace() {
+            let token;
+            (token, next_iter, cursor) = tokenize_symbol(self.source.clone(), cursor);
+            (Some(token), TokenIter::from(next_iter, cursor))
+        } else {
+            if chr == '\n' {
+                cursor = Position {
+                    line: cursor.line + 1,
+                    column: 0
+                }
+            }
+            TokenIter::from(next_iter, cursor).next()
+        }
+    }
 }
 
 pub fn lex(s: &str) -> Vec<Token> {
@@ -123,7 +168,9 @@ pub enum Symbol {
     Percent, // %
     Pipe, // |
     Dot, // .
-    Backtick // `
+    Backtick, // `
+    DepPair, // ^^
+    DepFunc, // ||
 }
 
 impl Symbol {
@@ -151,6 +198,8 @@ impl Symbol {
             Symbol::Backtick => "`".to_owned(),
             Symbol::Type => "*".to_owned(),
             Symbol::SetOfAll => "#".to_owned(),
+            Symbol::DepPair => "^^".to_owned(), // ^^
+            Symbol::DepFunc => "||".to_owned(), // ||
         }
     }
 }
@@ -165,6 +214,8 @@ pub fn tokenize_symbol<'a>(i: CharIter<'a>, cursor: Position) -> TokenGroup<'a> 
         [';', ..] => (Token::Symbol(Symbol::Semicolon, cursor), i.skip(1), adv),
         [',', ..] => (Token::Symbol(Symbol::Comma, cursor), i.skip(1), adv),
         [':', ':', ..] => (Token::Symbol(Symbol::DubleColon, cursor), i.skip(2), adv.advance(1)),
+        ['|', '|', ..] => (Token::Symbol(Symbol::DepFunc, cursor), i.skip(2), adv.advance(1)),
+        ['^', '^', ..] => (Token::Symbol(Symbol::DepPair, cursor), i.skip(2), adv.advance(1)),
         [':', ..] => (Token::Symbol(Symbol::Colon, cursor), i.skip(1), adv),
         ['.', ..] => (Token::Symbol(Symbol::Dot, cursor), i.skip(1), adv),
         ['`', ..] => (Token::Symbol(Symbol::Backtick, cursor), i.skip(1), adv),
@@ -183,7 +234,7 @@ pub fn tokenize_symbol<'a>(i: CharIter<'a>, cursor: Position) -> TokenGroup<'a> 
         ['<', '>', ..] => (Token::Symbol(Symbol::SelfRef, cursor), i.skip(2), adv.advance(1)),
         ['<', ..] => (Token::Symbol(Symbol::LeftDecl, cursor), i.skip(1), adv),
         [i, ..] => (Token::Illegal(i.to_string(), cursor), iter, adv),
-        [] => panic!("Expected symbol found nothing")
+        [] => panic!("Expected symbol found nothing at {:?}", cursor)
     }
 }
 

@@ -1,5 +1,5 @@
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Position {
     pub line:usize,
     pub column:usize,
@@ -16,9 +16,7 @@ impl Position {
 pub trait Iter:Sized + Clone {
     type Val: Sized;
 
-    fn next(&self) -> (Option<Self::Val>, Self)
-    where
-        Self: Sized;
+    fn next(&self) -> (Option<Self::Val>, Self);
 
     fn nth(&self, n: usize) -> (Option<Self::Val>, Self) {
         let mut new_iter = self.clone();
