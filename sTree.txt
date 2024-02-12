@@ -17,28 +17,32 @@ context =
 		| recur patt<>expr | mut recur patt<>expr
 		| rule context,
 
-expr =
+sort =
 	| ident
+    | [0-9]+(\.[0-9]*)? | * | ".*"
 
-	| (>patt1 ; expr)
-	| expr expr1 | expr1.expr
+	| (>patt1 ; sort)
+	| sort sort1 | sort1.sort
 
-	| (expr & expr1)
+	| (sort % sort1)
 	| indexableExpr@indexExpr
 
-	| expr1 >patt1 ; epxr
-	| expr1 >. epxr
+	| sort1 >. sort
 
-	| (recur patt<>expr)
+	| (recur patt<>sort)
 
-	| (with expr
-		| >patt ; expr
-		| >patt & (patt<expr) ; expr
-		| expr)
-	| (recur with expr
-		| >patt ; expr
-		| >patt & (patt<expr) ; expr
-		| expr)
+	| (with sort
+		| >patt ; sort
+		| >patt & (patt<sort) ; sort
+		| sort)
+	| (recur with sort
+		| >patt ; sort
+		| >patt & (patt<sort) ; sort
+		| sort)
+
+	| (^^patt % sort) | (sort1 % sort2)
+	| (||patt . sort) | (sort2 . sort1)
+
 patt =
 	| _
 	| _type | _0type | ... | _ntype
@@ -48,14 +52,7 @@ patt =
 
 	| patt::patt
 	| (patt1 & patt2)
-	| (patt2).patt1 // (parameter).inductive_data
-
-type =
-	| * | #
-	| U1 | U2 | ...
-	| word
-	| (^^patt & type) | (type1 & type2)
-	| (||patt . type) | (type1 . type2)
+	| (patt2.patt1) // (parameter.inductive_data)
 
 general type rules:
 	(sort) - "a term has a type, a type has a kind, kinds and types are both in sort => x : * : # : U1 : U2 ..."

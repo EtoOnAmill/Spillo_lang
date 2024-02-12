@@ -34,10 +34,6 @@ enum Sort {
         value:Token, 
         level:usize,
     },
-    Ident{
-        value:Token, 
-        level:usize,
-    },
     Function{
         param: Patt,
         body: Box<Sort>
