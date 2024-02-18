@@ -4,7 +4,7 @@
 
 // declarations
 %right '.' "::"
-%left '@' ':' ">."
+%left '@' ':' ">." ','
 %left ' '
 %nonassoc '>' ';' '_'
 // rules
@@ -12,12 +12,17 @@
 sort:
     ident
     | '0' | '1' | '2' | '3' | '4' | '5'
+
     | '(' '>' patt ';' sort ')'
     | sort ' ' sort | '(' sort '.' sort ')'
-    | '(' sort '%' sort ')' | sort '@' sort
     | sort ">." sort
+
+    | '(' sort '%' sort ')' | sort '@' sort
+
     | declaration
-    | '(' "recur with" sort branch ')'
+    | sort ',' sort
+
+    | '(' "iterate" sort branch ')'
     | '(' "with" sort branch ')'
     | '(' "||" patt '.' sort ')'
     | '(' "^^" patt '%' sort ')'
@@ -44,6 +49,7 @@ ident:
 ;
 declaration:
     | "(recur" patt "<>" sort ")" declaration
+    | "(inf" patt "<>" sort ")" declaration
     | "(" patt "<" sort ")" declaration
     | "(" sort ">" patt ")" declaration
 ;
