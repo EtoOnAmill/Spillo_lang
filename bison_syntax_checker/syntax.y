@@ -3,56 +3,41 @@
 %}
 
 // declarations
-%right '.' "::"
-%left '@' ':' ">." ','
-%left ' '
-%nonassoc '>' ';' '_'
+%right '.' '%' "::"
+%left ' ' '@'
+
 // rules
 %%
 sort:
-    ident
-    | '0' | '1' | '2' | '3' | '4' | '5'
+    '1' | '2' | '3' | ident
 
+    | "||" patt '.' sort
     | '(' '>' patt ';' sort ')'
-    | sort ' ' sort | '(' sort '.' sort ')'
-    | sort ">." sort
+    | sort ' ' sort | sort '.' sort
 
-    | '(' sort '%' sort ')' | sort '@' sort
+    | "^^" patt '%' sort
+    | sort '%' sort
+    | sort '@' sort
 
-    | declaration
-    | sort ',' sort
-
-    | '(' "iterate" sort branch ')'
     | '(' "with" sort branch ')'
-    | '(' "||" patt '.' sort ')'
-    | '(' "^^" patt '%' sort ')'
+    | '(' "iterate" sort branch ')'
 ;
 branch:
-    | '|' '>' patt ';' sort branch
-    | '|' '>' patt '&' declaration ';' sort branch
-    | '|' sort
+    | '|' '>' patt guard ';' sort branch
 ;
+guard:
+    | '&' patt '>' sort guard
+;
+ident:
+    'a' | 'b' | 'c'
 patt:
     '_'
     | '_' ident
     | '`' ident
-    | patt ':' sort
+    | '(' patt ':' sort ')' 
     | patt "::" patt
-    | '(' patt '%' patt ')'
-    | '(' patt '.' patt ')'
-;
-ident:
-    'a'
-    | 'b'
-    | 'x'
-    | 'y'
-;
-declaration:
-    | "(recur" patt "<>" sort ")" declaration
-    | "(inf" patt "<>" sort ")" declaration
-    | "(" patt "<" sort ")" declaration
-    | "(" sort ">" patt ")" declaration
-;
+    | patt '.' patt
+    | patt '%' patt
 %%
 
 // epilogue

@@ -1,24 +1,15 @@
-||x:A . B 
-f:(||`x:A.B) < (>x; x x)
-f:(#`x:A.B) < (>x; x x)
-f:(A!`x:A.B) < (>x; x x)
-f:(A . B) < (>x; x x)
-
-^^x:A % B
-p:(^^`x:A % B) < (x & x x)
-p:(#`x:A & B) < (x & x x)
-p:(E!`x:A % B) < (x & x x)
-p:(A & B) < (x & x x)
 
 sort =
+    | /[0-9]+(\.[0-9]*)?/ 
+    | /\*/ 
+    | /".*?"/
 	| ident
-    | /[0-9]+(\.[0-9]*)?/ | /\*/ | /".*?"/
 
 	| (>patt1 ; sort)
 	| sort sort1 | sort1.sort
 
 	| (sort % sort1)
-	| indexableExpr@indexExpr
+	| indexableSort@indexSort
 
 	| sort1 >. sort
 
@@ -45,14 +36,14 @@ declaration =
 
 patt =
 	| _
-	| _type | _type0 | ... | _typen
+    | _ident | _0ident | ... | _n°ident         // declare a variable of name `_n°ident` and type `ident`
 	| const
 	| `word
 	| patt:type
 
 	| patt::patt
 	| (patt1 % patt2)
-	| (patt2.patt1) // (parameter.inductive_data)
+	| (patt2.patt1)                             // (parameter.inductive_data)
 
 general type rules:
 	(sort) - "a term has a type, a type has a kind, kinds and types are both in sort => x : * : # : U1 : U2 ..."
@@ -97,7 +88,7 @@ type rules dependent pair(as a negative type):
 
 	(partition/elim) - "If given a contex in which M:(^^x:A % B) than the first element has type A, the second has type B with every x replaced with the first elemetn, and M can be evaulated to (A % evaluated type of B) when the first element is known"
 		T ]- M:(^^x:A % B)
-		T ]- M@1:A  			T ]- M@2:B[M@0/x] 			T ]- M@0:(A % B[M@1/x])
+		T ]- M@1:A  			T ]- M@2:B[M@1/x] 			T ]- M@0:(A % B[M@1/x])
 
 	(intro) - "If given a context and adding x:A to it you can derive M:B and (^^x:A % B) is a sort then (A >`x % M) has type (^^x:A % B)"
 		T , x:A	]- Y:B			T ]- (^^x:A % B):s
