@@ -56,10 +56,10 @@ impl Iter for TokenIter<'_> {
     type Val = Token;
     fn next(&self) -> (Option<<Self as Iter>::Val>, Self) {
         let mut cursor = self.cursor.clone();
-        
+
         let (Some(chr), mut next_iter) = self.source.next() else { return (None, self.clone()); };
 
-        if chr.is_alphabetic() || chr == '_' {
+        if chr.is_alphabetic() {
             let token;
             (token, next_iter, cursor) = tokenize_word(self.source.clone(), cursor);
             (Some(token), TokenIter::from(next_iter, cursor))
@@ -83,37 +83,8 @@ impl Iter for TokenIter<'_> {
     }
 }
 
-pub fn lex(s: &str) -> Vec<Token> {
-    let mut ret = Vec::new();
-    let mut i = CharIter::new(s);
-    let mut cursor = Position { line: 0, column: 0 };
-
-    while let (Some(chr), iter) = i.next() {
-        if chr.is_alphabetic() {
-            let token;
-            (token, i, cursor) = tokenize_word(i, cursor);
-            ret.push(token);
-        } else if chr.is_numeric() {
-            let token;
-            (token, i, cursor) = tokenize_number(i, cursor);
-            ret.push(token);
-        } else if !chr.is_whitespace() {
-            let token;
-            (token, i, cursor) = tokenize_symbol(i, cursor);
-            ret.push(token);
-        } else {
-            if chr == '\n' {
-                cursor = Position {
-                    line: cursor.line + 1,
-                    column: 0
-                }
-            }
-            i = iter;
-        }
-    }
-    ret.push(Token::EOF);
-
-    ret
+pub fn lex<'a>(s: &'a str) -> TokenIter<'a> {
+    TokenIter::new(s)
 }
 
 fn tokenize_number<'a>(i: CharIter<'a>, cursor: Position) -> TokenGroup<'a> {
@@ -127,6 +98,7 @@ fn tokenize_number<'a>(i: CharIter<'a>, cursor: Position) -> TokenGroup<'a> {
 
     if let (Some('.'), decimals) = iter.next() {
         let (vec, rest) = decimals.take_while(|e| e.is_numeric());
+        let new_cursor = new_cursor.advance(vec.len());
         let dec: usize = vec
             .into_iter()
             .collect::<String>()
@@ -167,6 +139,7 @@ pub enum Symbol {
     SetOfAll, // #
     Percent, // %
     Pipe, // |
+    Underscore, // _
     Dot, // .
     Backtick, // `
     DepPair, // ^^
@@ -194,6 +167,7 @@ impl Symbol {
             Symbol::Ampersand => "&".to_owned(),
             Symbol::Percent => "%".to_owned(),
             Symbol::Pipe => "|".to_owned(),
+            Symbol::Underscore => "_".to_owned(),
             Symbol::Dot => ".".to_owned(),
             Symbol::Backtick => "`".to_owned(),
             Symbol::Type => "*".to_owned(),
@@ -209,13 +183,17 @@ pub fn tokenize_symbol<'a>(i: CharIter<'a>, cursor: Position) -> TokenGroup<'a> 
     let adv = cursor.advance(1);
 
     match vec[0..] {
-        ['|', ..] => (Token::Symbol(Symbol::Pipe, cursor), i.skip(1), adv),
         ['>', '.', ..] => (Token::Symbol(Symbol::PipeInto, cursor), i.skip(2), adv.advance(1)),
+        ['<', '>', ..] => (Token::Symbol(Symbol::SelfRef, cursor), i.skip(2), adv.advance(1)),
+        ['<', ..] => (Token::Symbol(Symbol::LeftDecl, cursor), i.skip(1), adv),
+        ['>', ..] => (Token::Symbol(Symbol::RightDecl, cursor), i.skip(1), adv),
         [';', ..] => (Token::Symbol(Symbol::Semicolon, cursor), i.skip(1), adv),
         [',', ..] => (Token::Symbol(Symbol::Comma, cursor), i.skip(1), adv),
         [':', ':', ..] => (Token::Symbol(Symbol::DubleColon, cursor), i.skip(2), adv.advance(1)),
-        ['|', '|', ..] => (Token::Symbol(Symbol::DepFunc, cursor), i.skip(2), adv.advance(1)),
         ['^', '^', ..] => (Token::Symbol(Symbol::DepPair, cursor), i.skip(2), adv.advance(1)),
+        ['|', '|', ..] => (Token::Symbol(Symbol::DepFunc, cursor), i.skip(2), adv.advance(1)),
+        ['|', ..] => (Token::Symbol(Symbol::Pipe, cursor), i.skip(1), adv),
+        ['_', ..] => (Token::Symbol(Symbol::Underscore, cursor), i.skip(1), adv),
         [':', ..] => (Token::Symbol(Symbol::Colon, cursor), i.skip(1), adv),
         ['.', ..] => (Token::Symbol(Symbol::Dot, cursor), i.skip(1), adv),
         ['`', ..] => (Token::Symbol(Symbol::Backtick, cursor), i.skip(1), adv),
@@ -230,9 +208,6 @@ pub fn tokenize_symbol<'a>(i: CharIter<'a>, cursor: Position) -> TokenGroup<'a> 
         ['#', ..] => (Token::Symbol(Symbol::SetOfAll, cursor), i.skip(1), adv),
         ['*', ..] => (Token::Symbol(Symbol::Type, cursor), i.skip(1), adv),
         ['%', ..] => (Token::Symbol(Symbol::Percent, cursor), i.skip(1), adv),
-        ['>', ..] => (Token::Symbol(Symbol::RightDecl, cursor), i.skip(1), adv),
-        ['<', '>', ..] => (Token::Symbol(Symbol::SelfRef, cursor), i.skip(2), adv.advance(1)),
-        ['<', ..] => (Token::Symbol(Symbol::LeftDecl, cursor), i.skip(1), adv),
         [i, ..] => (Token::Illegal(i.to_string(), cursor), iter, adv),
         [] => panic!("Expected symbol found nothing at {:?}", cursor)
     }

@@ -31,8 +31,7 @@ enum Patt {
 }
 enum Sort {
     Const{
-        value:Token, 
-        level:usize,
+        value:Token,
     },
     Function{
         param: Patt,

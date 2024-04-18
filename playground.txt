@@ -1,14 +1,29 @@
-pitfall::{
-	`bool[T:s]:set { x | x: T -> T -> T } <
-	{ `true < (>n1 >n2 >> n1)
-	; `false< (>n1 >n2 >> n2) },
+`Curry[`a:*, `b:*, `c:*]: ( a % b . c ) . a.b.c <
+    (> `f;
+    > aa; > bb; f (aa % bb)),
+`Uncurry[`a:*, `b:*, `c:*]: (a . b . c) . a % b . c <
+    (> `f;
+    > aa % bb; f aa bb),
 
-	`If[T1:*; T2:*]: ||b:bool . T1 -> T2 -> b T1 T2 <
-		(>b where
-		| true >> (>n1 >n2 >> n1)
-		| false >> (>n1 >n2 >> n2)),
-	`nat:* where
-		| `zero:nat
-		| `succ:nat -> nat,
-	`Double: Nat -> Nat
-}
+`Is_even : int . bool < (
+    > _int & 0 < Rem _int 2; true 
+    > _; false ),
+
+`bool[T:s]:{ x where x: T.T.T } <
+    { `true < (>n1; >n2; n1)
+    ; `false< (>n1; >n2; n2) },
+
+`If[T1:*; T2:*]: ||b:bool .. T1 . T2 . (b T1 T2) <
+    (>b where
+    | true ; (>n1 >n2 ; n1)
+    | false ; (>n1 >n2 ; n2)),
+
+`nat:* where
+    | `zero:nat
+    | `succ:nat.nat,
+
+`const[`T:s]: T . s where
+    | `val: ||`x:T .. x const,
+
+`niConst: ||`T:s .. T.s,
+`val: ||`T:s .. ||`x:T .. x niConst,

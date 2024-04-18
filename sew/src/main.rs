@@ -9,28 +9,18 @@ use sew::Iter;
 //use crate::ast::build_ast;
 
 fn main() {
-    let pseudo_program = 
+    let pseudo_program =
     "main::{
-    `number<657.791,
-    `Fib:(Nat.Nat)<
+    let`number<657.791,
+    let`Fib:(Nat.Nat)<
     (>`n;
     recur with (n & Sub n 1)
         | > `acc & (`next).Succ ; Mul acc next & next),
-    `fib3< Fib 3
+    let`fib3 < Fib 3
     }";
 
-    let token_vec = lex(pseudo_program);
-    let mut token_iter = TokenIter::new(pseudo_program);
+    let mut token_iter = lex(pseudo_program);
 
-    /*
-    for token in &token_vec {
-        println!("{:?}", token);
-    }
-    */
-    for token in &token_vec {
-        print!("{} ", token);
-    }
-    println!("");
     while let (Some(token), next_iter) = token_iter.next() {
         token_iter = next_iter;
         print!("{} ", token);
