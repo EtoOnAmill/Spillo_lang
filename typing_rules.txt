@@ -1,0 +1,48 @@
+general type rules:
+	(sort) - "a term has a type, a type has a kind, kinds and types are both in sort => x : * : # : U1 : U2 ..."
+		0 ]- * : # : U1 : U2 : U3 : ...
+
+	(var) - "Given a context if A is a sort then x:A is well typed"
+		T ]- A:s
+		T , x:A ]- x:A
+
+	(weak) - "Given a context, adding to it will not remove derivation possible from it"
+		T ]- A:B				T ]- C:s
+		T , x:C ]- A:B
+		if x isn't contained in T
+
+	(conv) - "If given a context with A:B and B':s then you can derive A:B' if B is beta reducible to B'"
+		T ]- A:B 				T ]- B':s
+		T ]- A:B'
+		if B is beta reductible to B'
+
+type rules dependent functions(as a negative type):
+s is sort, minuscule are patterns, capitalised are any term
+T = context , ]- = derives , > = lambda abstraction , T,+:^ ]- ° = by adding (+) of (^) to the context you can derive (°)
+	(form) - "If given a context and adding to it x:A you can derive B:s2, then you can abstract x from B with (`x:A B .):s2"
+		T ]- A:s1 				T , x:A ]- B:s2
+		T ]- (`x:A B .):s2
+		if 'x' isn't free in 'B'      (`x:A B .):s2 = (A B .):s2
+
+	(appl/elim) - "Given a context with M:(`x:A B .) and N:A then (N M) has sort B with every occurrence of x in it replaced with N"
+		T , x:A ]- Y:B                  T ]- M:(`x:A B .)	T ]- N:A
+		T ]- (N M):B[N/x]
+
+	(abst/intro) - "If given a context and adding x:A to it you can derive M:B and (`x:A B .) is a sort then (>`x:A ; M) has sort (`x:A B .)"
+		T , x:A ]- M:B			T ]- (`x:A B .):s
+		T ]- (>`x:A; M):(`x:A B .)
+
+
+type rules dependent pair(as a negative type):
+	(form) -  "If given a context and adding to it x:A you can derive B:s2, then you can abstract x from B with (`x:A B %):s2"
+		T ]- A:s1 				T , x:A ]- B:s2
+		T ]- (`x:A B %):s2
+		if 'x' isn't free in 'B'      (`x:A B /):s2 = (A B %):s2
+
+	(partition/elim) - "If given a contex in which M:(`x:A B %) than the first element has type A, the second has type B with every x replaced with the first elemetn, and M can be evaulated to (A % evaluated type of B) when the first element is known"
+		T ]- M:(`x:A B %)
+		T ]- M@0:A  			T ]- M@1:B[M@1/x]
+
+	(intro) - "If given a context and adding x:A to it you can derive M:B and (`x:A B %) is a sort then (x >`x / M) has type (`x:A B %)"
+		T , x:A	]- Y:B			T ]- (`x:A B %):s
+		T ]- (x y /):(`x:A B %)  	T ]- (x Y /):(`x:A B %)

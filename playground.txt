@@ -1,29 +1,78 @@
-`Curry[`a:*, `b:*, `c:*]: ( a % b . c ) . a.b.c <
-    (> `f;
-    > aa; > bb; f (aa % bb)),
-`Uncurry[`a:*, `b:*, `c:*]: (a . b . c) . a % b . c <
-    (> `f;
-    > aa % bb; f aa bb),
+`Curry[`a:* `b:* `c:*]:  (a b % c .) a b c .. <
+    (> `F;
+    > aa; > bb; (aa bb /) F),
+`Uncurry[`a:* `b:* `c:*]: (a b c . .) (a b % c .) . <
+    (> `F;
+    > aa bb /; bb aa F),
 
-`Is_even : int . bool < (
-    > _int & 0 < Rem _int 2; true 
+`Is_even : int bool . < (
+    > _int & 0 < 2 _int Rem; true
     > _; false ),
 
-`bool[T:s]:{ x where x: T.T.T } <
-    { `true < (>n1; >n2; n1)
-    ; `false< (>n1; >n2; n2) },
+`bool[t:s]:{ x: t t t . . } where
+    | `true : bool < (>n1; >n2; n1)
+    | `false: bool < (>n1; >n2; n2) ,
 
-`If[T1:*; T2:*]: ||b:bool .. T1 . T2 . (b T1 T2) <
+`If[`t1:* `t2:*]: (`B:bool) t1 t2 (t2 t1 B) ..  <
     (>b where
-    | true ; (>n1 >n2 ; n1)
-    | false ; (>n1 >n2 ; n2)),
+    | true ; (>n1; >n2 ; n1)
+    | false ; (>n1; >n2 ; n2)),
 
 `nat:* where
-    | `zero:nat
-    | `succ:nat.nat,
+    | `zero : nat
+    | `S : nat nat . ,
 
-`const[`T:s]: T . s where
-    | `val: ||`x:T .. x const,
+let`z : nat < zero,
+let`three : nat < zero S S S
 
-`niConst: ||`T:s .. T.s,
-`val: ||`T:s .. ||`x:T .. x niConst,
+rec`ind_nat : type <
+    (nat::`variant)
+    (with variant (
+        > 0; unit
+        > 1; ind_nat
+        > _ ; nothing ))
+    %,
+
+let`z : ind_nat < 0 () /,
+let`three : ind_nat < 1 1 1 z //,
+
+`Const[`T:s]: T s . where
+    | `val: (`x:T) x Const ..,
+
+`NiConst: (`t:s) t s ..,
+`val: (`t:s) (`x:t) (x NiConst) ..,
+
+`fib : nat nat . <
+    (>n;
+    iterate n 0 / ( > n acc /; n 1 Sub acc n Add / )
+    p2)
+
+# index into a nth tuple
+# take an index
+# build the type of a tuple at least indexly nested
+# get the indexed type and set it as the return
+
+rec`many_types : type1 <
+    (type::`t)
+    with t (
+        >unit; unit
+        >_; many_types)
+    %,
+
+rec`Undef_len_tuple : type many_types type .. < (>`acc; (
+    >unit unit /; acc
+    >`t `rest /; t acc % rest Undef_len_tuple)),
+
+rec`Idx_pair[`a:type `b:type `p:a b %] : nat p (either a or n 1 - b Idx_pair).. < (
+    > 0; > aa bb /; aa
+    > 1; > aa bb /; bb
+    > n; > aa bb /; n 1 Sub bb Idx_pair)
+
+
+rec`iterable[`i:type `e:type] : set < {
+    let`Next : e i %
+    let`value: i},
+let iterable_nat : iterable[nat nat] <
+    { `Next : nat nat nat % . < (>n; n (n 1 Add) /) }
+rec`expand[i;e] : iterable[i;e] e inf / . <
+    (>ii; with ii Next (>e i /; e i Next /))

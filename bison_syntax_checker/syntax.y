@@ -6,13 +6,12 @@
     // lower precedence
 %precedence '|'
 %precedence '&'
-%right '.' ".."
-%right'%' "%%"
-%left ' '
+%right ' '
+%precedence '/' '.' '%'
 %left '@'
-%left "::"
+%right "::"
 %precedence ':'
-%precedence '[' '_' 
+%precedence '[' '_'
     // higher precedence
 
 // rules
@@ -31,43 +30,44 @@ sort:
     | '(' sort ')'
     | sort implicit
 
-    | "||" patt ".." sort
-    | "||" patt '.' sort
-    | '(' paramatch ')'
-    | sort ' ' sort | sort '.' sort
+    | sort ' ' sort "."                     // type
+    | '(' sort ' ' multisort ".." ')'       // type
+    | '(' branch ')'                        // declaration
+    | '(' sort ' ' multisort '!' ')'        // elimination // greedy proximity(first argument is closest to the function) application
+    | '(' sort ' ' multisort '?' ')'        // elimination // greedy inverted(first argument is furthest to the left) application
 
-    | "^^" patt "%%" sort
-    | "^^" patt '%' sort
-    | sort '%' sort
-    | sort '@' sort
+    | sort ' ' sort "%"                     // type
+    | '(' sort ' ' multisort "%%" ')'       // type
+    | sort ' ' sort '/'                     // declaration
+    | '(' sort ' ' multisort "//" ')'       // declaration
+    | sort '@' sort                         // elimination
 
-    | '{' '%' element '}'
-    | '{' rule '}'
-
-    | '(' "with" sort branch ')'
-    | '(' "iterate" sort branch ')'
+    | sort "::" '(' patt ')'                // for dependent type creation
+    | "with " sort '(' branch ')'           // unnecessary but can make reading the code easier
+    | "iterate " sort '(' branch ')'
 ;
-paramatch: | '>' patt guard ';' sort paramatch ;
-branch: | '|' patt guard ';' sort branch | '|' ';' sort;
+branch: | '>' patt guard ';' sort branch;
 guard:
     | '&' patt '<' sort guard
     | '|' patt guard
 ;
-multipatt: | patt ',' multipatt;
-multisort: | sort ',' multisort;
-rule: | multipatt ';' multisort;
-element: | patt '<' sort ',' element;
 ident: 'a' | 'b' | 'c';
 patt:
     '_'
-    | '_' literal
-    | '`' ident implicit
+    | ident
+    | literal
+    | '`' ident implicit_dec
     | patt ':' sort
     | patt "::" patt
-    | patt '.' patt
-    | patt '%' patt
+    | patt ' ' patt '.'
+    | patt ' ' patt '!' | patt ' ' patt '?'
+    | patt ' ' patt '%'
+    | patt ' ' patt '/'
 ;
+multisort: | sort ' ' multisort;
 implicit: '[' multisort ']';
+multipatt: | patt ' ' multipatt;
+implicit_dec: | '[' multipatt ']';
 %%
 
 // epilogue
