@@ -19,30 +19,30 @@ general type rules:
 type rules dependent functions(as a negative type):
 s is sort, minuscule are patterns, capitalised are any term
 T = context , ]- = derives , > = lambda abstraction , T,+:^ ]- ° = by adding (+) of (^) to the context you can derive (°)
-	(form) - "If given a context and adding to it x:A you can derive B:s2, then you can abstract x from B with (`x:A B .):s2"
+	(form) - "If given a context and adding to it x:A you can derive B:s2, then you can abstract x from B with (A@x B .):s2"
 		T ]- A:s1 				T , x:A ]- B:s2
-		T ]- (`x:A B .):s2
-		if 'x' isn't free in 'B'      (`x:A B .):s2 = (A B .):s2
+		T ]- (A@x B[x/x] .):s2
+		if 'x' isn't free in 'B'      (A@x B .):s2 = (A B .):s2
 
-	(appl/elim) - "Given a context with M:(`x:A B .) and N:A then (N M) has sort B with every occurrence of x in it replaced with N"
-		T , x:A ]- Y:B                  T ]- M:(`x:A B .)	T ]- N:A
-		T ]- (N M):B[N/x]
+	(appl/elim) - "Given a context with M:(A@x B .) and N:A then (N M) has sort B with every occurrence of x in it replaced with N"
+		T , x:A ]- Y:B                  T ]- M:(A@x B .)	T ]- N:A
+		T ]- (N M!):B[N/x]
 
-	(abst/intro) - "If given a context and adding x:A to it you can derive M:B and (`x:A B .) is a sort then (>`x:A ; M) has sort (`x:A B .)"
-		T , x:A ]- M:B			T ]- (`x:A B .):s
-		T ]- (>`x:A; M):(`x:A B .)
+	(abst/intro) - "If given a context and adding x:A to it you can derive M:B and (A@x B .) is a sort then (>x:A ; M) has sort (A@x B .)"
+		T , x:A ]- M:B			T ]- (A@x B .):s
+		T ]- (>x:A; M):(A@x B .)
 
 
 type rules dependent pair(as a negative type):
-	(form) -  "If given a context and adding to it x:A you can derive B:s2, then you can abstract x from B with (`x:A B %):s2"
+	(form) -  "If given a context and adding to it x:A you can derive B:s2, then you can abstract x from B with (A@x B %):s2"
 		T ]- A:s1 				T , x:A ]- B:s2
-		T ]- (`x:A B %):s2
-		if 'x' isn't free in 'B'      (`x:A B /):s2 = (A B %):s2
+		T ]- (A@x B %):s2
+		if 'x' isn't free in 'B'      (A@x B %):s2 = (A B %):s2
 
-	(partition/elim) - "If given a contex in which M:(`x:A B %) than the first element has type A, the second has type B with every x replaced with the first elemetn, and M can be evaulated to (A % evaluated type of B) when the first element is known"
-		T ]- M:(`x:A B %)
-		T ]- M@0:A  			T ]- M@1:B[M@1/x]
+	(partition/elim) - "If given a contex in which M:(A@x B %) than the first element has type A, the second has type B with every x replaced with the first elemetn, and M can be evaulated to (A % evaluated type of B) when the first element is known"
+		T ]- M:(A@x B %)
+		T ]- 0 M!:A  			T ]- 1 M!:B[M@1/x]
 
-	(intro) - "If given a context and adding x:A to it you can derive M:B and (`x:A B %) is a sort then (x >`x / M) has type (`x:A B %)"
-		T , x:A	]- Y:B			T ]- (`x:A B %):s
-		T ]- (x y /):(`x:A B %)  	T ]- (x Y /):(`x:A B %)
+	(intro) - "If given a context and adding x:A to it you can derive M:B and (A@x B %) is a sort then (x >x / M) has type (A@x B %)"
+		T , x:A	]- Y:B			T ]- (A@x B %):s
+		T ]- (x Y /):(A@x B %)

@@ -1,78 +1,95 @@
-`Curry[`a:* `b:* `c:*]:  (a b % c .) a b c .. <
-    (> `F;
-    > aa; > bb; (aa bb /) F),
-`Uncurry[`a:* `b:* `c:*]: (a b c . .) (a b % c .) . <
-    (> `F;
-    > aa bb /; bb aa F),
+let Curry[a:* b:* c:*]:  (a b % c .) a b c .. =
+    (>F;
+    >aa; >bb; (aa bb /) F!)
+let Uncurry[a:* b:* c:*]: (a b c . .) (a b % c .) . =
+    (>F;
+    >aa bb /; bb aa F!!)
 
-`Is_even : int bool . < (
-    > _int & 0 < 2 _int Rem; true
-    > _; false ),
+let Is_even : int bool . = (
+    > i & 0 = 2 i Rem!!; true
+    > _; false )
 
-`bool[t:s]:{ x: t t t . . } where
-    | `true : bool < (>n1; >n2; n1)
-    | `false: bool < (>n1; >n2; n2) ,
+let If[t1:* t2:*]: bool@B t1 t2 (t2 t1 B!!) ..  = (
+    > true ; (>n1; >n2 ; n1)
+    > false ; (>n1; >n2 ; n2))
 
-`If[`t1:* `t2:*]: (`B:bool) t1 t2 (t2 t1 B) ..  <
-    (>b where
-    | true ; (>n1; >n2 ; n1)
-    | false ; (>n1; >n2 ; n2)),
-
-`nat:* where
-    | `zero : nat
-    | `S : nat nat . ,
-
-let`z : nat < zero,
-let`three : nat < zero S S S
-
-rec`ind_nat : type <
-    (nat::`variant)
+rec ind_nat : type =
+    (bit@variant)
     (with variant (
         > 0; unit
-        > 1; ind_nat
-        > _ ; nothing ))
-    %,
+        > 1; ind_nat))
+    %
 
-let`z : ind_nat < 0 () /,
-let`three : ind_nat < 1 1 1 z //,
+let z : ind_nat = 0 () /
+let three : ind_nat = 1 1 1 z //
 
-`Const[`T:s]: T s . where
-    | `val: (`x:T) x Const ..,
+let pattern_fuckery = 3::n 2 Add!!::nn n Mul!! nn Add!!
 
-`NiConst: (`t:s) t s ..,
-`val: (`t:s) (`x:t) (x NiConst) ..,
-
-`fib : nat nat . <
+let fib : nat nat . =
     (>n;
-    iterate n 0 / ( > n acc /; n 1 Sub acc n Add / )
-    p2)
+    iterate n 0 / (
+        > n acc /; n 1 Sub acc n Add /
+        > 0 acc /; acc))
 
-# index into a nth tuple
-# take an index
-# build the type of a tuple at least indexly nested
-# get the indexed type and set it as the return
+let coordinate : type = string@s (s (
+    > "column"; nat
+    > "row"; nat
+    > _; nothing)!) .
+let New_coord : nat nat coordinate .. = (>col; >row; (
+    > "column"; col
+    > "row"; row))
+let origin : coordinate = 0 0 New_coord!!
+let 0 = "row" origin!
 
-rec`many_types : type1 <
-    (type::`t)
-    with t (
-        >unit; unit
-        >_; many_types)
-    %,
+let Option : type type . = ( >t;
+    string@s
+    s (>"none"; unit >"some"; t)!
+    %)
+let none[t:type] : t Option! = "none" () /
 
-rec`Undef_len_tuple : type many_types type .. < (>`acc; (
-    >unit unit /; acc
-    >`t `rest /; t acc % rest Undef_len_tuple)),
+rec nat : set = {
+    def zero : nat
+    def ducc : nat nat . }
 
-rec`Idx_pair[`a:type `b:type `p:a b %] : nat p (either a or n 1 - b Idx_pair).. < (
-    > 0; > aa bb /; aa
-    > 1; > aa bb /; bb
-    > n; > aa bb /; n 1 Sub bb Idx_pair)
+let z : nat = nat@zero
+let one : nat = nat@zero nat@succ!
 
+with nat
+let z : nat = zero
+let one : nat = zero succ!
 
-rec`iterable[`i:type `e:type] : set < {
-    let`Next : e i %
-    let`value: i},
-let iterable_nat : iterable[nat nat] <
-    { `Next : nat nat nat % . < (>n; n (n 1 Add) /) }
-rec`expand[i;e] : iterable[i;e] e inf / . <
-    (>ii; with ii Next (>e i /; e i Next /))
+rec iterator : type module . = >item;
+    { def next : item item iter! %?
+    , let tail : item iter! = next@1
+    , let head : item = next@0
+    , let nth : nat item iter! = >n; n next / (
+          >> 0 ii /; ii
+          > n (_ tl /) /; n dec! tl /) }
+
+rec step : nat nat nat iter! .. = >start; >delta;
+    nat iter!::{
+        let next = start (delta start delta add!! step!!) /
+    }
+
+let nats : nat iter! = 1 0 step!!
+let even : nat iter! = 2 0 step!!
+let odds : nat iter! = 2 1 step!!
+
+# sieve of erathostenes
+# 1) takes natural number
+# 2) remove multiple of 2
+# 3) take next number
+# 4) remove multiple of number
+# 5) repeat from step 3
+
+let divides : nat nat bool .. = >ider; >idend;
+    ider idend rem!! 0 eq!!
+
+let compose[a:type b:type c:type] : b c . a b . a c .. = >fa; >fb; >x; x fb! fa!
+
+rec primes : nat iter! nat iter! . = > hd tl /;
+    tl (hd divides! not compose!!) filter!! # removes all multiples of number
+    (> _ ttl /; hd (ttl primes!) /)! # go to next number
+
+let primes_fr : nat iter! = nats@tail@tail primes!
+
