@@ -7,7 +7,7 @@
 %precedence '|'
 %precedence '&'
 %right ' '
-%precedence '/' '.' '%'
+%precedence '/' '%' '?' '!' '^'
 %left '@'
 %right "::"
 %precedence ':'
@@ -27,9 +27,17 @@ set:
     | "let" patt '=' sort set
     | "rec" patt '=' sort set
     | "inf" patt '=' sort set;
-// litteral expression, numbers, type, kind, set, module, universe
+// numbers tokens
+digit: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '0';
+wholenum:
+    digit
+    | digit wholenum;
+number:
+    wholenum
+    | wholenum '.' wholenum;
+// litteral expression
 literal:
-    '1' | '2' | '3' | "type" | "kind" | "set" | "module" | "sort";
+    number | "type" | "kind" | "set" | "module" | "sort";
 // these are all expressions, called sorts because they can be at any level universe
 sort:
     ident
@@ -45,29 +53,37 @@ sort:
 
 // functions
 // type, always takes 2 sorts and doesn't curry
-    | sort ' ' sort "."
+    | sort ' ' sort '^'
 // declaration, there are two types of function, more is explained at the fnBranch declaration
     | '(' fnBranch ')'
-// elimination,  application, with RPN rules, fn on the right parameters on the left
-// as it is rn the order of parameter in declaration and application is inverted, still don't know how and if i want to change it
-    | sort ' ' sort '!'
 
 // pairs
 // type, like functions they always take 2 sort and can't curry
-    | sort ' ' sort "%"
+    | sort ' ' sort '%'
 // declaration, like the type
     | sort ' ' sort '/'
 
-// the parenthesis are just to help bison out, realistically they are only needed when the pattern is more than one token
+// elimination, application, with RPN rules, fn on the right parameters on the left
+// for function is simple application, for pairs the first sort must be a positive whole number n
+// it returns the nth element of the tuple
+// as it is rn the order of parameter in declaration and application is inverted
+// still don't know how and if i want to change it
+    | sort ' ' sort '!'
+
+// the parenthesis are just to help bison out
+// realistically they are only needed when the pattern is more than one token
 // for dependent type creation, it's the same as "patt : sort"
-    | sort '@' '(' patt ')'
-// for dependent type creation, works like a "patt = sort"
+    | sort '@' 'E' '(' patt ')' ' ' sort '%'
+    | sort '@' 'A' '(' patt ')' ' ' sort '^' 
+// works like "patt = sort" without the need to break apart the expression
     | sort "::" '(' patt ')'
 
-// transform a module "sort" into a set, sort must be a module
+// transform a module into a set
 // in the brackets all "def" present in the module must be given a "let" or "rec" declaration with the same name and type
     | sort "::" '{' set '}'
-// here sort must be a set and ident must be declared inside, this set the whole expression has the value of ident
+// this represents the type of a set where there are at least the element indicated in the brackets
+    | "set::" '{' multipatt '}'
+// sort must be a set and ident must be declared inside, this expression has the type and value of the ident inside the set
     | sort '@' ident
 
 // unnecessary but can make reading the code easier
@@ -80,7 +96,7 @@ sort:
 // otherwhise it acts as a simple function
 // iterative functions only work if the expression after the matched parameter isn't a function as you can't pattern match on functions
 fnBranch:
-    | '>' '>' patt guard ';' sort fnBranch
+    | ">>" patt guard ';' sort fnBranch
     | '>' patt guard ';' sort fnBranch;
 
 // extra patterns to match
@@ -93,24 +109,26 @@ guard:
     | '|' patt guard ;
 
 // identifiers can use any character that isn't a symbol already present in the grammar and can't be equal to keywords
-ident: 'a' | 'b' | 'c' | 's' | 't';
+letter: 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z';
+ident: letter | letter ident;
 
 // the bread and butter of pattern matching
-// all types like sorts have a type and they must match with the expression they are matching or it's a type error
 patt:
 // match anything and bind to the identifier
     '_' | ident
 // same as the "(sort)" here to help the programmer not the compiler
     | '(' patt ')'
 // match with a constant expression
-    | literal | '^' ident | '^' '(' sort ')' // constant sort pattern matching
+    | literal | '~' ident | '~' '(' sort ')' // constant sort pattern matching
 // match with explicit implicit arguments
-// in declarations it can be used to bring into context sorts without having to pass them explicitly every time the patt is used
+// in declarations it can be used to bring into context sorts without having to pass them explicitly every time the patt is used in the program
     | patt implicit_dec
 // classic element type relationship
     | patt ':' sort
 // when you need to match the internal of something but you also need the whole
     | patt "::" patt
+// to match the inner element of a set
+    | '{' set '}'
 // match on a ?????? in here only if in the future i can make inductive types work well enough
     | patt ' ' patt '!'
 // match on a pair

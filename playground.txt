@@ -1,64 +1,53 @@
-let Curry[a:* b:* c:*]:  (a b % c .) a b c .. =
+let Curry[a:* b:* c:*]:  (a b % c ^) a b c ^ ^ ^ =
     (>F;
     >aa; >bb; (aa bb /) F!)
-let Uncurry[a:* b:* c:*]: (a b c . .) (a b % c .) . =
+let Uncurry[a:* b:* c:*]: (a b c ^ ^) (a b % c ^) ^ =
     (>F;
     >aa bb /; bb aa F!!)
 
-let Is_even : int bool . = (
+let Is_even : int bool ^ = (
     > i & 0 = 2 i Rem!!; true
     > _; false )
 
-let If[t1:* t2:*]: bool@B t1 t2 (t2 t1 B!!) ..  = (
+let If[t1:* t2:*]: bool@A(B) t1 t2 (t2 t1 B!!) ^ ^ ^  = (
     > true ; (>n1; >n2 ; n1)
     > false ; (>n1; >n2 ; n2))
 
 rec ind_nat : type =
-    (bit@variant)
+    bit@E(variant)
     (with variant (
         > 0; unit
         > 1; ind_nat))
     %
 
 let z : ind_nat = 0 () /
-let three : ind_nat = 1 1 1 z //
+let three : ind_nat = 1 1 1 z / / /
 
 let pattern_fuckery = 3::n 2 Add!!::nn n Mul!! nn Add!!
 
-let fib : nat nat . =
+let fib : nat nat ^ =
     (>n;
     iterate n 0 / (
         > n acc /; n 1 Sub acc n Add /
         > 0 acc /; acc))
 
-let coordinate : type = string@s (s (
+let coordinate : type = string@A(s) (s (
     > "column"; nat
     > "row"; nat
-    > _; nothing)!) .
-let New_coord : nat nat coordinate .. = (>col; >row; (
+    > _; nothing)!) ^
+let New_coord : nat nat coordinate ^ ^ = (>col; >row; (
     > "column"; col
     > "row"; row))
 let origin : coordinate = 0 0 New_coord!!
 let 0 = "row" origin!
 
-let Option : type type . = ( >t;
-    string@s
+let Option : type type ^ = ( >t;
+    string@E(s)
     s (>"none"; unit >"some"; t)!
     %)
 let none[t:type] : t Option! = "none" () /
 
-rec nat : set = {
-    def zero : nat
-    def ducc : nat nat . }
-
-let z : nat = nat@zero
-let one : nat = nat@zero nat@succ!
-
-with nat
-let z : nat = zero
-let one : nat = zero succ!
-
-rec iterator : type module . = >item;
+rec iterator : type module ^ = >item;
     { def next : item item iter! %?
     , let tail : item iter! = next@1
     , let head : item = next@0
@@ -66,7 +55,7 @@ rec iterator : type module . = >item;
           >> 0 ii /; ii
           > n (_ tl /) /; n dec! tl /) }
 
-rec step : nat nat nat iter! .. = >start; >delta;
+rec step : nat nat nat iter! ^ ^ = >start; >delta;
     nat iter!::{
         let next = start (delta start delta add!! step!!) /
     }
@@ -82,12 +71,12 @@ let odds : nat iter! = 2 1 step!!
 # 4) remove multiple of number
 # 5) repeat from step 3
 
-let divides : nat nat bool .. = >ider; >idend;
+let divides : nat nat bool ^ ^ = >ider; >idend;
     ider idend rem!! 0 eq!!
 
-let compose[a:type b:type c:type] : b c . a b . a c .. = >fa; >fb; >x; x fb! fa!
+let compose[a:type b:type c:type] : (b c ^) (a b ^) (a c ^) ^ ^ = >fa; >fb; >x; x fb! fa!
 
-rec primes : nat iter! nat iter! . = > hd tl /;
+rec primes : nat iter! nat iter! ^ = > hd tl /;
     tl (hd divides! not compose!!) filter!! # removes all multiples of number
     (> _ ttl /; hd (ttl primes!) /)! # go to next number
 
