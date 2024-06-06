@@ -1,5 +1,7 @@
 */target/*
 oldvers
+installation
+objdir
 
 # inported gcc gitignore
 *.diff
