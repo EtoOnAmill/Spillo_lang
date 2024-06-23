@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/sew
+sew.so
+sew.dylib
+sew.dll
+sew.a
+sew.lib
+sew-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst
