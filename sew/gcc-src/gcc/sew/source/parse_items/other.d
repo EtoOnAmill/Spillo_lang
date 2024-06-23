@@ -1,0 +1,72 @@
+import parse_items;
+
+struct Ident {
+    Locus position;
+    string name;
+}
+
+struct Number {
+    Locus position;
+    string whole;
+    string decimal;
+}
+
+enum Tmulti { pair, extended }
+struct MultiSort {
+    Tmulti type;
+    Locus position;
+    Sort left;
+    MultiSort* right;
+}
+struct MultiPattern {
+    Tmulti type;
+    Locus position;
+    Pattern left;
+    MultiPattern* right;
+}
+
+enum Tguard { and, or }
+struct Guard {
+    Tguard type;
+    Locus position;
+    union {
+        struct And {
+            Pattern patt;
+            Sort sort;
+            Guard* next;
+        }
+        struct Or {
+            Pattern patt;
+            Sort sort;
+        }
+    }
+}
+
+enum TfnBranch {
+    required, // `>`
+    extended, // `>`
+    extendedIterate, // `>>`
+}
+struct FnBranch {
+    TfnBranch type;
+    Locus position;
+    union {
+        struct Required {
+            Pattern patt;
+            Guard guard;
+            Sort sort;
+        }
+        struct Extended {
+            Pattern patt;
+            Guard guard;
+            Sort sort;
+            FnBranch* next;
+        }
+        struct ExtendedIterate {
+            Pattern patt;
+            Guard guard;
+            Sort sort;
+            FnBranch* next;
+        }
+    }
+}
