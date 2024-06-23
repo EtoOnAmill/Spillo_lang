@@ -5,23 +5,34 @@ alias size = size_t;
 Token[] tokenize(string input) {
     Token[] ret;
     
-    size line = 0;
-    size column = 0;
+    size line_start = 1;
+    size column_start = 1;
+    size line_end = 1;
+    size column_end = 1;
 
     string token;
 
-    auto extendToken = (char c) {token ~= c;};
-    void pushToTokenList (string value, size column_start, size line) {
+    auto extendToken = (char c) {
+        import std.stdio : writeln;
+        writeln("extending : ", token, " ", c, " -- c/l=(", column_start, ",", column_end, ")(", line_start, ",", line_end, ")");
+        token ~= c;
+    };
+    void pushToTokenList () {
         if(token.length == 0) { return; }
-// (TODO) make it so it counts fucking graphemes instead of bytes
-        column += token.length;
+        import std.stdio : writeln;
+        writeln("pushing : ", token, " -- c/l=(", column_start, ",", column_end, ")(", line_start, ",", line_end, ")");
 
         Token newToken = {
             column_start : column_start,
-            line : line,
-            value : value,
-            ttype : identify(value[0]),
+            column_end : column_end,
+            line_start : line_start,
+            line_end : line_end,
+            value : token,
+            ttype : identify(token[0]),
         };
+
+        column_start = column_end;
+        line_start = line_end;
 
         token = "";
 
@@ -29,7 +40,7 @@ Token[] tokenize(string input) {
     }
     auto push_multichar_reserved = (string _, char c) {
         extendToken(c);
-        pushToTokenList(token, column, line);
+        pushToTokenList();
     };
 
     if (input.length == 0) { return ret; }
@@ -37,30 +48,42 @@ Token[] tokenize(string input) {
     foreach( char curr_char; input){
 
         if(token.length == 0) {
-            if(char_type(curr_char) != ChrType.white_s) 
+            if(char_type(curr_char) != ChrType.white_s) { 
                 extendToken(curr_char);
+            } else {
+                import std.stdio : writeln;
+                writeln("igonoring : ", curr_char, " -- c/l=(", column_start, ",", column_end, ")(", line_start, ",", line_end, ")");
+            }
+            column_start = column_end;
+            column_end += 1;
             continue;
         }
-        
+
+       
         Ttype token_type = identify(token[0]);
         ChrType curr_char_type = char_type(curr_char);
 
-
         match(token_type, curr_char_type)
         .to!(any(), ChrType.white_s) ((tt,ct) {
-            pushToTokenList(token, column, line);
+            pushToTokenList();
 
-            if(curr_char == '\n') {
-                column = 0;
-                line += 1;
+            if (curr_char == '\n'){
+                column_start = 1;
+                column_end = 1;
+
+                line_start += 1;
+                line_end += 1;
             } else {
-                column += 1;
+                column_start = column_end;
+            
+                import std.stdio : writeln;
+                writeln("igonoring : ", curr_char, " -- c/l=(", column_start, ",", column_end, ")(", line_start, ",", line_end, ")");
             }
-        })
+            })
     // if tok is numb, if char is numb extendToken else pushToTokenList
         .to!(Ttype.number, ChrType.number) ((tt,ct) { extendToken(curr_char); })
         .to!(Ttype.number, any()) ((tt,ct) {
-            pushToTokenList(token,column,line);
+            pushToTokenList();
             extendToken(curr_char);
         })
     // if tok is litteral, check if char can forms multi_char litteral 
@@ -73,20 +96,22 @@ Token[] tokenize(string input) {
             .to!("^", ')') (push_multichar_reserved)
             .to!("!", ')') (push_multichar_reserved)
             .to!(any(), any()) ((_,c) {
-                pushToTokenList(token, column, line);
+                pushToTokenList();
                 extendToken(c);
             });
         })
     // if tok is word, if char is reserved or whitespace pushToTokenList else extendToken
         .to!(Ttype.word, ChrType.reserved) ((tt,ct) {
-             pushToTokenList(token, column, line);
+             pushToTokenList();
              extendToken(curr_char);
         })
-        .to!(Ttype.word, any()) ((tt,ct) { extendToken(curr_char); })
-        ;
+        .to!(Ttype.word, any()) ((tt,ct) { extendToken(curr_char); }) ;
+
+
+        column_end += 1;
     }
 
-    pushToTokenList(token, column, line);
+    pushToTokenList();
 
     return ret;
 }
@@ -95,15 +120,17 @@ struct Token {
     Ttype ttype;
     string value;
 
-    size line;
+    size line_start;
+    size line_end;
     size column_start;
-    size column_end() => column_start + value.length;
+    size column_end;
 }
 
 enum Ttype {
     litteral,
     word,
     number,
+    litStr,
 }
 
 enum ChrType {
