@@ -1,0 +1,1233 @@
+Grammar
+
+    0 $accept: sort $end
+
+    1 sort: ident
+    2     | literal
+    3     | '(' sort ')'
+    4     | sort sort '^'
+    5     | '(' multisort "^)"
+    6     | '(' fnBranch ')'
+    7     | sort sort '%'
+    8     | '(' multisort "%)"
+    9     | sort sort '/'
+   10     | '(' multisort "/)"
+   11     | sort sort '!'
+   12     | '(' multisort "!)"
+   13     | sort '@' '(' patt ')' sort '%'
+   14     | sort '@' '(' patt ')' sort '^'
+   15     | sort "::" '(' patt ')'
+
+   16 number: NUM
+   17       | NUM '.' NUM
+
+   18 literal: number
+   19        | "U" number
+
+   20 fnBranch: '>' patt guard ';' sort
+   21         | ">>" patt guard ';' sort fnBranch
+   22         | '>' patt guard ';' sort fnBranch
+
+   23 guard: ε
+   24      | '&' patt '=' sort guard
+   25      | '|' patt guard
+
+   26 ident: WORD
+
+   27 patt: ident
+   28     | '(' patt ')'
+   29     | literal
+   30     | '~' ident
+   31     | '~' '(' sort ')'
+   32     | '(' patt ':' sort ')'
+   33     | patt "::" '(' patt ')'
+   34     | patt patt '/'
+   35     | '(' multipatt "/)"
+
+   36 multisort: sort sort
+   37          | sort multisort
+
+   38 multipatt: patt patt
+   39          | patt multipatt
+
+
+Terminals, with rules where they appear
+
+    $end (0) 0
+    '!' (33) 11
+    '%' (37) 7 13
+    '&' (38) 24
+    '(' (40) 3 5 6 8 10 12 13 14 15 28 31 32 33 35
+    ')' (41) 3 6 13 14 15 28 31 32 33
+    '.' (46) 17
+    '/' (47) 9 34
+    ':' (58) 32
+    ';' (59) 20 21 22
+    '=' (61) 24
+    '>' (62) 20 22
+    '@' (64) 13 14
+    '^' (94) 4 14
+    '|' (124) 25
+    '~' (126) 30 31
+    error (256)
+    NUM (258) 16 17
+    WORD (259) 26
+    "::" (260) 15 33
+    "^)" (261) 5
+    "%)" (262) 8
+    "/)" (263) 10 35
+    "!)" (264) 12
+    "U" (265) 19
+    ">>" (266) 21
+
+
+Nonterminals, with rules where they appear
+
+    $accept (27)
+        on left: 0
+    sort (28)
+        on left: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+        on right: 0 3 4 7 9 11 13 14 15 20 21 22 24 31 32 36 37
+    number (29)
+        on left: 16 17
+        on right: 18 19
+    literal (30)
+        on left: 18 19
+        on right: 2 29
+    fnBranch (31)
+        on left: 20 21 22
+        on right: 6 21 22
+    guard (32)
+        on left: 23 24 25
+        on right: 20 21 22 24 25
+    ident (33)
+        on left: 26
+        on right: 1 27 30
+    patt (34)
+        on left: 27 28 29 30 31 32 33 34 35
+        on right: 13 14 15 20 21 22 24 25 28 32 33 34 38 39
+    multisort (35)
+        on left: 36 37
+        on right: 5 8 10 12 37
+    multipatt (36)
+        on left: 38 39
+        on right: 35 39
+
+
+State 0
+
+    0 $accept: • sort $end
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    sort     go to state 5
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 1
+
+   16 number: NUM •
+   17       | NUM • '.' NUM
+
+    '.'  shift, and go to state 9
+
+    $default  reduce using rule 16 (number)
+
+
+State 2
+
+   26 ident: WORD •
+
+    $default  reduce using rule 26 (ident)
+
+
+State 3
+
+    3 sort: '(' • sort ')'
+    5     | '(' • multisort "^)"
+    6     | '(' • fnBranch ')'
+    8     | '(' • multisort "%)"
+   10     | '(' • multisort "/)"
+   12     | '(' • multisort "!)"
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+    '>'   shift, and go to state 10
+    ">>"  shift, and go to state 11
+
+    sort       go to state 12
+    number     go to state 6
+    literal    go to state 7
+    fnBranch   go to state 13
+    ident      go to state 8
+    multisort  go to state 14
+
+
+State 4
+
+   19 literal: "U" • number
+
+    NUM  shift, and go to state 1
+
+    number  go to state 15
+
+
+State 5
+
+    0 $accept: sort • $end
+    4 sort: sort • sort '^'
+    7     | sort • sort '%'
+    9     | sort • sort '/'
+   11     | sort • sort '!'
+   13     | sort • '@' '(' patt ')' sort '%'
+   14     | sort • '@' '(' patt ')' sort '^'
+   15     | sort • "::" '(' patt ')'
+
+    $end  shift, and go to state 16
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '@'   shift, and go to state 17
+    "::"  shift, and go to state 18
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    sort     go to state 19
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 6
+
+   18 literal: number •
+
+    $default  reduce using rule 18 (literal)
+
+
+State 7
+
+    2 sort: literal •
+
+    $default  reduce using rule 2 (sort)
+
+
+State 8
+
+    1 sort: ident •
+
+    $default  reduce using rule 1 (sort)
+
+
+State 9
+
+   17 number: NUM '.' • NUM
+
+    NUM  shift, and go to state 20
+
+
+State 10
+
+   20 fnBranch: '>' • patt guard ';' sort
+   22         | '>' • patt guard ';' sort fnBranch
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 25
+
+
+State 11
+
+   21 fnBranch: ">>" • patt guard ';' sort fnBranch
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 26
+
+
+State 12
+
+    3 sort: '(' sort • ')'
+    4     | sort • sort '^'
+    7     | sort • sort '%'
+    9     | sort • sort '/'
+   11     | sort • sort '!'
+   13     | sort • '@' '(' patt ')' sort '%'
+   14     | sort • '@' '(' patt ')' sort '^'
+   15     | sort • "::" '(' patt ')'
+   36 multisort: sort • sort
+   37          | sort • multisort
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '@'   shift, and go to state 17
+    "::"  shift, and go to state 18
+    '('   shift, and go to state 3
+    ')'   shift, and go to state 27
+    "U"   shift, and go to state 4
+
+    sort       go to state 28
+    number     go to state 6
+    literal    go to state 7
+    ident      go to state 8
+    multisort  go to state 29
+
+
+State 13
+
+    6 sort: '(' fnBranch • ')'
+
+    ')'  shift, and go to state 30
+
+
+State 14
+
+    5 sort: '(' multisort • "^)"
+    8     | '(' multisort • "%)"
+   10     | '(' multisort • "/)"
+   12     | '(' multisort • "!)"
+
+    "^)"  shift, and go to state 31
+    "%)"  shift, and go to state 32
+    "/)"  shift, and go to state 33
+    "!)"  shift, and go to state 34
+
+
+State 15
+
+   19 literal: "U" number •
+
+    $default  reduce using rule 19 (literal)
+
+
+State 16
+
+    0 $accept: sort $end •
+
+    $default  accept
+
+
+State 17
+
+   13 sort: sort '@' • '(' patt ')' sort '%'
+   14     | sort '@' • '(' patt ')' sort '^'
+
+    '('  shift, and go to state 35
+
+
+State 18
+
+   15 sort: sort "::" • '(' patt ')'
+
+    '('  shift, and go to state 36
+
+
+State 19
+
+    4 sort: sort • sort '^'
+    4     | sort sort • '^'
+    7     | sort • sort '%'
+    7     | sort sort • '%'
+    9     | sort • sort '/'
+    9     | sort sort • '/'
+   11     | sort • sort '!'
+   11     | sort sort • '!'
+   13     | sort • '@' '(' patt ')' sort '%'
+   14     | sort • '@' '(' patt ')' sort '^'
+   15     | sort • "::" '(' patt ')'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '/'   shift, and go to state 37
+    '%'   shift, and go to state 38
+    '!'   shift, and go to state 39
+    '^'   shift, and go to state 40
+    '@'   shift, and go to state 17
+    "::"  shift, and go to state 18
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    sort     go to state 19
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 20
+
+   17 number: NUM '.' NUM •
+
+    $default  reduce using rule 17 (number)
+
+
+State 21
+
+   28 patt: '(' • patt ')'
+   32     | '(' • patt ':' sort ')'
+   35     | '(' • multipatt "/)"
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number     go to state 6
+    literal    go to state 23
+    ident      go to state 24
+    patt       go to state 41
+    multipatt  go to state 42
+
+
+State 22
+
+   30 patt: '~' • ident
+   31     | '~' • '(' sort ')'
+
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 43
+
+    ident  go to state 44
+
+
+State 23
+
+   29 patt: literal •
+
+    $default  reduce using rule 29 (patt)
+
+
+State 24
+
+   27 patt: ident •
+
+    $default  reduce using rule 27 (patt)
+
+
+State 25
+
+   20 fnBranch: '>' patt • guard ';' sort
+   22         | '>' patt • guard ';' sort fnBranch
+   33 patt: patt • "::" '(' patt ')'
+   34     | patt • patt '/'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '|'   shift, and go to state 45
+    '&'   shift, and go to state 46
+    "::"  shift, and go to state 47
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    $default  reduce using rule 23 (guard)
+
+    number   go to state 6
+    literal  go to state 23
+    guard    go to state 48
+    ident    go to state 24
+    patt     go to state 49
+
+
+State 26
+
+   21 fnBranch: ">>" patt • guard ';' sort fnBranch
+   33 patt: patt • "::" '(' patt ')'
+   34     | patt • patt '/'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '|'   shift, and go to state 45
+    '&'   shift, and go to state 46
+    "::"  shift, and go to state 47
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    $default  reduce using rule 23 (guard)
+
+    number   go to state 6
+    literal  go to state 23
+    guard    go to state 50
+    ident    go to state 24
+    patt     go to state 49
+
+
+State 27
+
+    3 sort: '(' sort ')' •
+
+    $default  reduce using rule 3 (sort)
+
+
+State 28
+
+    4 sort: sort • sort '^'
+    4     | sort sort • '^'
+    7     | sort • sort '%'
+    7     | sort sort • '%'
+    9     | sort • sort '/'
+    9     | sort sort • '/'
+   11     | sort • sort '!'
+   11     | sort sort • '!'
+   13     | sort • '@' '(' patt ')' sort '%'
+   14     | sort • '@' '(' patt ')' sort '^'
+   15     | sort • "::" '(' patt ')'
+   36 multisort: sort • sort
+   36          | sort sort •
+   37          | sort • multisort
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '/'   shift, and go to state 37
+    '%'   shift, and go to state 38
+    '!'   shift, and go to state 39
+    '^'   shift, and go to state 40
+    '@'   shift, and go to state 17
+    "::"  shift, and go to state 18
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    $default  reduce using rule 36 (multisort)
+
+    sort       go to state 28
+    number     go to state 6
+    literal    go to state 7
+    ident      go to state 8
+    multisort  go to state 29
+
+
+State 29
+
+   37 multisort: sort multisort •
+
+    $default  reduce using rule 37 (multisort)
+
+
+State 30
+
+    6 sort: '(' fnBranch ')' •
+
+    $default  reduce using rule 6 (sort)
+
+
+State 31
+
+    5 sort: '(' multisort "^)" •
+
+    $default  reduce using rule 5 (sort)
+
+
+State 32
+
+    8 sort: '(' multisort "%)" •
+
+    $default  reduce using rule 8 (sort)
+
+
+State 33
+
+   10 sort: '(' multisort "/)" •
+
+    $default  reduce using rule 10 (sort)
+
+
+State 34
+
+   12 sort: '(' multisort "!)" •
+
+    $default  reduce using rule 12 (sort)
+
+
+State 35
+
+   13 sort: sort '@' '(' • patt ')' sort '%'
+   14     | sort '@' '(' • patt ')' sort '^'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 51
+
+
+State 36
+
+   15 sort: sort "::" '(' • patt ')'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 52
+
+
+State 37
+
+    9 sort: sort sort '/' •
+
+    $default  reduce using rule 9 (sort)
+
+
+State 38
+
+    7 sort: sort sort '%' •
+
+    $default  reduce using rule 7 (sort)
+
+
+State 39
+
+   11 sort: sort sort '!' •
+
+    $default  reduce using rule 11 (sort)
+
+
+State 40
+
+    4 sort: sort sort '^' •
+
+    $default  reduce using rule 4 (sort)
+
+
+State 41
+
+   28 patt: '(' patt • ')'
+   32     | '(' patt • ':' sort ')'
+   33     | patt • "::" '(' patt ')'
+   34     | patt • patt '/'
+   38 multipatt: patt • patt
+   39          | patt • multipatt
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    "::"  shift, and go to state 47
+    ':'   shift, and go to state 53
+    '('   shift, and go to state 21
+    ')'   shift, and go to state 54
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number     go to state 6
+    literal    go to state 23
+    ident      go to state 24
+    patt       go to state 55
+    multipatt  go to state 56
+
+
+State 42
+
+   35 patt: '(' multipatt • "/)"
+
+    "/)"  shift, and go to state 57
+
+
+State 43
+
+   31 patt: '~' '(' • sort ')'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    sort     go to state 58
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 44
+
+   30 patt: '~' ident •
+
+    $default  reduce using rule 30 (patt)
+
+
+State 45
+
+   25 guard: '|' • patt guard
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 59
+
+
+State 46
+
+   24 guard: '&' • patt '=' sort guard
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 60
+
+
+State 47
+
+   33 patt: patt "::" • '(' patt ')'
+
+    '('  shift, and go to state 61
+
+
+State 48
+
+   20 fnBranch: '>' patt guard • ';' sort
+   22         | '>' patt guard • ';' sort fnBranch
+
+    ';'  shift, and go to state 62
+
+
+State 49
+
+   33 patt: patt • "::" '(' patt ')'
+   34     | patt • patt '/'
+   34     | patt patt • '/'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '/'   shift, and go to state 63
+    "::"  shift, and go to state 47
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 49
+
+
+State 50
+
+   21 fnBranch: ">>" patt guard • ';' sort fnBranch
+
+    ';'  shift, and go to state 64
+
+
+State 51
+
+   13 sort: sort '@' '(' patt • ')' sort '%'
+   14     | sort '@' '(' patt • ')' sort '^'
+   33 patt: patt • "::" '(' patt ')'
+   34     | patt • patt '/'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    "::"  shift, and go to state 47
+    '('   shift, and go to state 21
+    ')'   shift, and go to state 65
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 49
+
+
+State 52
+
+   15 sort: sort "::" '(' patt • ')'
+   33 patt: patt • "::" '(' patt ')'
+   34     | patt • patt '/'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    "::"  shift, and go to state 47
+    '('   shift, and go to state 21
+    ')'   shift, and go to state 66
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 49
+
+
+State 53
+
+   32 patt: '(' patt ':' • sort ')'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    sort     go to state 67
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 54
+
+   28 patt: '(' patt ')' •
+
+    $default  reduce using rule 28 (patt)
+
+
+State 55
+
+   33 patt: patt • "::" '(' patt ')'
+   34     | patt • patt '/'
+   34     | patt patt • '/'
+   38 multipatt: patt • patt
+   38          | patt patt •
+   39          | patt • multipatt
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '/'   shift, and go to state 63
+    "::"  shift, and go to state 47
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    $default  reduce using rule 38 (multipatt)
+
+    number     go to state 6
+    literal    go to state 23
+    ident      go to state 24
+    patt       go to state 55
+    multipatt  go to state 56
+
+
+State 56
+
+   39 multipatt: patt multipatt •
+
+    $default  reduce using rule 39 (multipatt)
+
+
+State 57
+
+   35 patt: '(' multipatt "/)" •
+
+    $default  reduce using rule 35 (patt)
+
+
+State 58
+
+    4 sort: sort • sort '^'
+    7     | sort • sort '%'
+    9     | sort • sort '/'
+   11     | sort • sort '!'
+   13     | sort • '@' '(' patt ')' sort '%'
+   14     | sort • '@' '(' patt ')' sort '^'
+   15     | sort • "::" '(' patt ')'
+   31 patt: '~' '(' sort • ')'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '@'   shift, and go to state 17
+    "::"  shift, and go to state 18
+    '('   shift, and go to state 3
+    ')'   shift, and go to state 68
+    "U"   shift, and go to state 4
+
+    sort     go to state 19
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 59
+
+   25 guard: '|' patt • guard
+   33 patt: patt • "::" '(' patt ')'
+   34     | patt • patt '/'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '|'   shift, and go to state 45
+    '&'   shift, and go to state 46
+    "::"  shift, and go to state 47
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    $default  reduce using rule 23 (guard)
+
+    number   go to state 6
+    literal  go to state 23
+    guard    go to state 69
+    ident    go to state 24
+    patt     go to state 49
+
+
+State 60
+
+   24 guard: '&' patt • '=' sort guard
+   33 patt: patt • "::" '(' patt ')'
+   34     | patt • patt '/'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    "::"  shift, and go to state 47
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '='   shift, and go to state 70
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 49
+
+
+State 61
+
+   33 patt: patt "::" '(' • patt ')'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 21
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 71
+
+
+State 62
+
+   20 fnBranch: '>' patt guard ';' • sort
+   22         | '>' patt guard ';' • sort fnBranch
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    sort     go to state 72
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 63
+
+   34 patt: patt patt '/' •
+
+    $default  reduce using rule 34 (patt)
+
+
+State 64
+
+   21 fnBranch: ">>" patt guard ';' • sort fnBranch
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    sort     go to state 73
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 65
+
+   13 sort: sort '@' '(' patt ')' • sort '%'
+   14     | sort '@' '(' patt ')' • sort '^'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    sort     go to state 74
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 66
+
+   15 sort: sort "::" '(' patt ')' •
+
+    $default  reduce using rule 15 (sort)
+
+
+State 67
+
+    4 sort: sort • sort '^'
+    7     | sort • sort '%'
+    9     | sort • sort '/'
+   11     | sort • sort '!'
+   13     | sort • '@' '(' patt ')' sort '%'
+   14     | sort • '@' '(' patt ')' sort '^'
+   15     | sort • "::" '(' patt ')'
+   32 patt: '(' patt ':' sort • ')'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '@'   shift, and go to state 17
+    "::"  shift, and go to state 18
+    '('   shift, and go to state 3
+    ')'   shift, and go to state 75
+    "U"   shift, and go to state 4
+
+    sort     go to state 19
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 68
+
+   31 patt: '~' '(' sort ')' •
+
+    $default  reduce using rule 31 (patt)
+
+
+State 69
+
+   25 guard: '|' patt guard •
+
+    $default  reduce using rule 25 (guard)
+
+
+State 70
+
+   24 guard: '&' patt '=' • sort guard
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    sort     go to state 76
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 71
+
+   33 patt: patt • "::" '(' patt ')'
+   33     | patt "::" '(' patt • ')'
+   34     | patt • patt '/'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    "::"  shift, and go to state 47
+    '('   shift, and go to state 21
+    ')'   shift, and go to state 77
+    "U"   shift, and go to state 4
+    '~'   shift, and go to state 22
+
+    number   go to state 6
+    literal  go to state 23
+    ident    go to state 24
+    patt     go to state 49
+
+
+State 72
+
+    4 sort: sort • sort '^'
+    7     | sort • sort '%'
+    9     | sort • sort '/'
+   11     | sort • sort '!'
+   13     | sort • '@' '(' patt ')' sort '%'
+   14     | sort • '@' '(' patt ')' sort '^'
+   15     | sort • "::" '(' patt ')'
+   20 fnBranch: '>' patt guard ';' sort •
+   22         | '>' patt guard ';' sort • fnBranch
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '@'   shift, and go to state 17
+    "::"  shift, and go to state 18
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+    '>'   shift, and go to state 10
+    ">>"  shift, and go to state 11
+
+    $default  reduce using rule 20 (fnBranch)
+
+    sort      go to state 19
+    number    go to state 6
+    literal   go to state 7
+    fnBranch  go to state 78
+    ident     go to state 8
+
+
+State 73
+
+    4 sort: sort • sort '^'
+    7     | sort • sort '%'
+    9     | sort • sort '/'
+   11     | sort • sort '!'
+   13     | sort • '@' '(' patt ')' sort '%'
+   14     | sort • '@' '(' patt ')' sort '^'
+   15     | sort • "::" '(' patt ')'
+   21 fnBranch: ">>" patt guard ';' sort • fnBranch
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '@'   shift, and go to state 17
+    "::"  shift, and go to state 18
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+    '>'   shift, and go to state 10
+    ">>"  shift, and go to state 11
+
+    sort      go to state 19
+    number    go to state 6
+    literal   go to state 7
+    fnBranch  go to state 79
+    ident     go to state 8
+
+
+State 74
+
+    4 sort: sort • sort '^'
+    7     | sort • sort '%'
+    9     | sort • sort '/'
+   11     | sort • sort '!'
+   13     | sort • '@' '(' patt ')' sort '%'
+   13     | sort '@' '(' patt ')' sort • '%'
+   14     | sort • '@' '(' patt ')' sort '^'
+   14     | sort '@' '(' patt ')' sort • '^'
+   15     | sort • "::" '(' patt ')'
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '%'   shift, and go to state 80
+    '^'   shift, and go to state 81
+    '@'   shift, and go to state 17
+    "::"  shift, and go to state 18
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    sort     go to state 19
+    number   go to state 6
+    literal  go to state 7
+    ident    go to state 8
+
+
+State 75
+
+   32 patt: '(' patt ':' sort ')' •
+
+    $default  reduce using rule 32 (patt)
+
+
+State 76
+
+    4 sort: sort • sort '^'
+    7     | sort • sort '%'
+    9     | sort • sort '/'
+   11     | sort • sort '!'
+   13     | sort • '@' '(' patt ')' sort '%'
+   14     | sort • '@' '(' patt ')' sort '^'
+   15     | sort • "::" '(' patt ')'
+   24 guard: '&' patt '=' sort • guard
+
+    NUM   shift, and go to state 1
+    WORD  shift, and go to state 2
+    '|'   shift, and go to state 45
+    '&'   shift, and go to state 46
+    '@'   shift, and go to state 17
+    "::"  shift, and go to state 18
+    '('   shift, and go to state 3
+    "U"   shift, and go to state 4
+
+    $default  reduce using rule 23 (guard)
+
+    sort     go to state 19
+    number   go to state 6
+    literal  go to state 7
+    guard    go to state 82
+    ident    go to state 8
+
+
+State 77
+
+   33 patt: patt "::" '(' patt ')' •
+
+    $default  reduce using rule 33 (patt)
+
+
+State 78
+
+   22 fnBranch: '>' patt guard ';' sort fnBranch •
+
+    $default  reduce using rule 22 (fnBranch)
+
+
+State 79
+
+   21 fnBranch: ">>" patt guard ';' sort fnBranch •
+
+    $default  reduce using rule 21 (fnBranch)
+
+
+State 80
+
+   13 sort: sort '@' '(' patt ')' sort '%' •
+
+    $default  reduce using rule 13 (sort)
+
+
+State 81
+
+   14 sort: sort '@' '(' patt ')' sort '^' •
+
+    $default  reduce using rule 14 (sort)
+
+
+State 82
+
+   24 guard: '&' patt '=' sort guard •
+
+    $default  reduce using rule 24 (guard)

@@ -38,7 +38,7 @@ number:
     | NUM '.' NUM;
 // litteral expression
 literal:
-    number | "type" | "kind" | "set" | "module" | "sort";
+    number | 'U' number | "set" | "module";
 // these are all expressions, called sorts because they can be at any level universe
 sort:
     ident
@@ -52,28 +52,28 @@ sort:
 
 // functions
 // type, always takes 2 sorts and doesn't curry
-    | sort sort '^'
+    | sort sort '^' | '(' multisort "^)"
 // declaration, there are two types of function, more is explained at the fnBranch declaration
     | '(' fnBranch ')'
 
 // pairs
 // type, like functions they always take 2 sort and can't curry
-    | sort sort '%'
+    | sort sort '%' | '(' multisort "%)"
 // declaration, like the type
-    | sort sort '/'
+    | sort sort '/' | sort sort "/?" | '(' multisort "/)"
 
 // elimination, application, with RPN rules, fn on the right parameters on the left
 // for function is simple application, for pairs the first sort must be a positive whole number n
 // it returns the nth element of the tuple
 // as it is rn the order of parameter in declaration and application is inverted
 // still don't know how and if i want to change it
-    | sort sort '!'
+    | sort sort '!' | '(' multisort "!)"
 
 // the parenthesis are just to help bison out
 // realistically they are only needed when the pattern is more than one token
 // for dependent type creation, it's the same as "patt : sort"
-    | sort '@' '(' patt ')' sort '%' | sort '@' '(' patt ')' " , " sort '%'
-    | sort '@' '(' patt ')' sort '^' | sort '@' '(' patt ')' " . " sort '^'
+    | sort '@' '(' patt ')' sort '%' | sort '@' '(' patt ')' " , " sort '%' | sort sort "%?"
+    | sort '@' '(' patt ')' sort '^' | sort '@' '(' patt ')' " . " sort '^' | sort sort "^?"
 // works like "patt = sort" without the need to break apart the expression
     | sort "::" '(' patt ')'
 
@@ -86,8 +86,8 @@ sort:
     | sort '@' ident
 
 // if any fnBranch contains the duble greater (>>)
-// then the function is iterative and the expression in the (>) branches gets used as parameters for the next iteration
-// untill it breaks when it matches on a branch with the (>>)
+// then the function is iterative and the expression in the (>>) branches gets used as parameters for the next iteration
+// untill it breaks when it matches on a branch with the (>)
 // otherwhise it acts as a simple function
 // iterative functions only work if the expression after the matched parameter isn't a function as you can't pattern match on functions
 fnBranch:
@@ -125,14 +125,14 @@ patt:
 // to match the inner element of a set
     | '{' set '}'
 // match on a ?????? in here only if in the future i can make inductive types work well enough
-    | patt ' ' patt '!'
+    | patt ' ' patt '!' | '(' multipatt "!)"
 // match on a pair
-    | patt ' ' patt '/' ;
+    | patt ' ' patt '/' | '(' multipatt "/)";
 
-multisort: | sort ' ' multisort;
-implicit: '[' multisort ']';
-multipatt: | patt ' ' multipatt;
-implicit_dec: '[' multipatt ']';
+multisort: sort sort | sort multisort;
+implicit: '[' multisort ']' | '[' sort ']';
+multipatt: patt patt | patt multipatt;
+implicit_dec: '[' multipatt ']' | '[' patt ']';
 %%
 
 // epilogue
