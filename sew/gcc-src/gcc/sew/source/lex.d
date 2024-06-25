@@ -2,6 +2,7 @@ import multi_switch;
 
 alias size = size_t;
 
+
 Token[] tokenize(string input) {
     Token[] ret;
     
@@ -12,10 +13,26 @@ Token[] tokenize(string input) {
 
     string token;
 
+    void whitespace_logic(char curr_char) {
+        if (curr_char == '\n'){
+            column_start = 1;
+            column_end = 1;
+
+            line_start += 1;
+            line_end += 1;
+        } else {
+            column_end += 1;
+            column_start = column_end;
+
+            import std.stdio : writeln;
+            writeln("igonoring : ", curr_char, " -- c/l=(", column_start, ",", column_end, ")(", line_start, ",", line_end, ")");
+        }
+    }
     auto extendToken = (char c) {
         import std.stdio : writeln;
         writeln("extending : ", token, " ", c, " -- c/l=(", column_start, ",", column_end, ")(", line_start, ",", line_end, ")");
         token ~= c;
+        column_end += 1;
     };
     void pushToTokenList () {
         if(token.length == 0) { return; }
@@ -47,15 +64,16 @@ Token[] tokenize(string input) {
 
     foreach( char curr_char; input){
 
+
         if(token.length == 0) {
-            if(char_type(curr_char) != ChrType.white_s) { 
+            if(char_type(curr_char) != ChrType.white_s) {
+                column_start = column_end;
                 extendToken(curr_char);
             } else {
                 import std.stdio : writeln;
                 writeln("igonoring : ", curr_char, " -- c/l=(", column_start, ",", column_end, ")(", line_start, ",", line_end, ")");
+                whitespace_logic(curr_char);
             }
-            column_start = column_end;
-            column_end += 1;
             continue;
         }
 
@@ -63,25 +81,16 @@ Token[] tokenize(string input) {
         Ttype token_type = identify(token[0]);
         ChrType curr_char_type = char_type(curr_char);
 
+
         match(token_type, curr_char_type)
         .to!(any(), ChrType.white_s) ((tt,ct) {
             pushToTokenList();
-
-            if (curr_char == '\n'){
-                column_start = 1;
-                column_end = 1;
-
-                line_start += 1;
-                line_end += 1;
-            } else {
-                column_start = column_end;
-            
-                import std.stdio : writeln;
-                writeln("igonoring : ", curr_char, " -- c/l=(", column_start, ",", column_end, ")(", line_start, ",", line_end, ")");
-            }
-            })
+            whitespace_logic(curr_char);
+        })
     // if tok is numb, if char is numb extendToken else pushToTokenList
-        .to!(Ttype.number, ChrType.number) ((tt,ct) { extendToken(curr_char); })
+        .to!(Ttype.number, ChrType.number) ((tt,ct) {
+            extendToken(curr_char);
+        })
         .to!(Ttype.number, any()) ((tt,ct) {
             pushToTokenList();
             extendToken(curr_char);
@@ -105,10 +114,10 @@ Token[] tokenize(string input) {
              pushToTokenList();
              extendToken(curr_char);
         })
-        .to!(Ttype.word, any()) ((tt,ct) { extendToken(curr_char); }) ;
+        .to!(Ttype.word, any()) ((tt,ct) {
+            extendToken(curr_char);
+        }) ;
 
-
-        column_end += 1;
     }
 
     pushToTokenList();
