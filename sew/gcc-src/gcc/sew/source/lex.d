@@ -32,7 +32,13 @@ Token[] tokenize(string input) {
         import std.stdio : writeln;
         writeln("extending : ", token, " ", c, " -- c/l=(", column_start, ",", column_end, ")(", line_start, ",", line_end, ")");
         token ~= c;
-        column_end += 1;
+
+        if (c == '\n') {
+            column_end = 1;
+            line_end += 1;
+        } else {
+            column_end += 1;
+        }
     };
     void pushToTokenList () {
         if(token.length == 0) { return; }
@@ -83,6 +89,17 @@ Token[] tokenize(string input) {
 
 
         match(token_type, curr_char_type)
+        .to!(Ttype.litStr, ChrType.strDelimiter) ((tt,ct) {
+            extendToken(curr_char);
+            pushToTokenList();
+        })
+        .to!(any(), ChrType.strDelimiter) ((tt,ct) {
+            pushToTokenList();
+            extendToken(curr_char);
+        })
+        .to!(Ttype.litStr, any()) ((tt,ct) {
+            extendToken(curr_char);
+        })
         .to!(any(), ChrType.white_s) ((tt,ct) {
             pushToTokenList();
             whitespace_logic(curr_char);
@@ -130,8 +147,8 @@ struct Token {
     string value;
 
     size line_start;
-    size line_end;
     size column_start;
+    size line_end;
     size column_end;
 }
 
@@ -146,6 +163,7 @@ enum ChrType {
     reserved,
     word,
     number,
+    strDelimiter,
     white_s
 }
 
@@ -156,6 +174,7 @@ static assert(cast(ChrType) Ttype.litteral== ChrType.reserved);
 ChrType char_type(char cc) {
     switch (cc) {
         case ' ': case '\t': case '\n': return ChrType.white_s;
+        case '`': return ChrType.strDelimiter;
         default: return cast(ChrType) identify(cc);
     }
 }
@@ -180,6 +199,8 @@ Ttype identify(char string_start){
         case '|':
         case '~':
             return Ttype.litteral;
+        case '`':
+            return Ttype.litStr;
         default:
             return Ttype.word;
     }
