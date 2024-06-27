@@ -139,8 +139,52 @@ Token[] tokenize(string input) {
 
     pushToTokenList();
 
+    return join_multi_char_reserved(ret);
+}
+
+Token[] join_multi_char_reserved(Token[] tokens) {
+    Token[] ret;
+
+    int i;
+    for(i = 0; i + 1 < tokens.length; i++){
+        Token curr_token = tokens[i];
+        Token next_token = tokens[i + 1];
+        string curr = curr_token.value;
+        string next = next_token.value;
+
+        Token newToken = curr_token;
+
+        switch(curr){
+            case ">":
+            case ":":
+                if(next == curr){
+                    newToken.value = curr ~ next;
+                    newToken.column_end = next_token.column_end;
+                    newToken.line_end = next_token.line_end;
+                    i += 1;
+                }
+                break;
+            case "/":
+            case "%":
+            case "^":
+            case "!":
+                if(next == ")"){
+                    newToken.value = curr ~ next;
+                    newToken.column_end = next_token.column_end;
+                    newToken.line_end = next_token.line_end;
+                    i += 1;
+                }
+                ret ~= newToken;
+                break;
+            default:
+                ret ~= newToken;
+                break;
+        }
+    }
     return ret;
 }
+
+
 
 struct Token {
     Ttype ttype;
