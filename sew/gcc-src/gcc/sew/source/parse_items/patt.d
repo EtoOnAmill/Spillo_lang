@@ -16,10 +16,10 @@ struct Pattern {
     Locus position;
     union {
         string ident;
-        Sort constexpr;
+        Sort* constexpr;
         struct {
             Pattern* patt;
-            Sort ptype;
+            Sort* ptype;
         }
         struct {
             Pattern* whole;

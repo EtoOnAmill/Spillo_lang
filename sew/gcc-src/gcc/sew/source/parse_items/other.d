@@ -24,12 +24,6 @@ struct Litteral {
     }
 }
 
-struct MultiSort {
-    Tmulti type;
-    Locus position;
-    Sort* left;
-    MultiSort* right;
-}
 
 enum Tguard { and, or }
 struct Guard {

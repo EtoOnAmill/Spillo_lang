@@ -11,7 +11,22 @@ struct Sort {
     Tsort type;
     Locus position;
     union {
-
+        string ident;
+        MultiSort multiSort;
+        FnBranch fnLitteral;
+        struct {
+            Sort* left;
+            Sort* right;
+        }
+        struct {
+            Sort* dLeft;
+            Pattern* dIdent;
+            Sort* dRight;
+        }
+        struct {
+            Sort* sValue;
+            Pattern* pAlias;
+        }
     }
 }
 
@@ -20,15 +35,15 @@ enum Tsort {
     litteral,
 
     fnType,
-    fnTypeMulti,
-    fnLitteral,
-
     pairType,
-    pairTypeMulti,
     pairLitteral,
-    pairLitteralMulti,
 
+    fnLitteral,
     application,
+
+    pairTypeMulti,
+    fnTypeMulti,
+    pairLitteralMulti,
     applicationMulti,
 
     dependentFunctionType,
