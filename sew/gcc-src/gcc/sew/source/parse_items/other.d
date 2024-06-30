@@ -1,5 +1,7 @@
 import parse_items;
 
+enum Tmulti { pair, extended }
+
 struct Ident {
     Locus position;
     string name;
@@ -22,18 +24,11 @@ struct Litteral {
     }
 }
 
-enum Tmulti { pair, extended }
 struct MultiSort {
     Tmulti type;
     Locus position;
-    Sort left;
+    Sort* left;
     MultiSort* right;
-}
-struct MultiPattern {
-    Tmulti type;
-    Locus position;
-    Pattern left;
-    MultiPattern* right;
 }
 
 enum Tguard { and, or }

@@ -1,5 +1,12 @@
 import parse_items;
 
+struct MultiSort {
+    Tmulti type;
+    Locus position;
+    Sort* left;
+    MultiSort* right;
+}
+
 struct Sort {
     Tsort type;
     Locus position;
@@ -7,7 +14,6 @@ struct Sort {
 
     }
 }
-
 
 enum Tsort {
     ident,
