@@ -2,6 +2,8 @@
 oldvers
 installation
 objdir
+*.output
+*.tab.c
 
 # inported gcc gitignore
 *.diff
