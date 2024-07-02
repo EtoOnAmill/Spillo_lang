@@ -11,6 +11,13 @@ struct ParseItem {
     PItype type;
     Locus location;
     union {
+        Ident ident;
+        Sort sort;
+        FnBranch fnBranch;
+        Guard guard;
+        Pattern patt;
+        MultiSort multiSort;
+        MultiPattern multiPattern;
     }
 }
 

@@ -8,23 +8,6 @@ struct Ident {
 }
 
 
-struct Number {
-    Locus position;
-    string whole;
-    string decimal;
-}
-
-enum Tlitteral { number, sstring }
-struct Litteral {
-    Tlitteral type;
-    Locus position;
-    union {
-        Number number;
-        string sstring;
-    }
-}
-
-
 enum Tguard { and, or }
 struct Guard {
     Tguard type;

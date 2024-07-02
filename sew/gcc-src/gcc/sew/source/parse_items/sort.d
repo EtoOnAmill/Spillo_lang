@@ -12,35 +12,49 @@ struct Sort {
     Locus position;
     union {
         string ident;
+        string strLitteral;
+        // all binary operator in a "( <multisort> <bin_op>)" situation
         MultiSort multiSort;
+        // function declaration
         FnBranch fnLitteral;
+        // all binary operators
         struct {
             Sort* left;
             Sort* right;
         }
+        // dependent types
         struct {
             Sort* dLeft;
             Pattern* dIdent;
             Sort* dRight;
         }
+        // sort :: patt
         struct {
             Sort* sValue;
             Pattern* pAlias;
+        }
+        // number litteral
+        struct {
+            string whole;
+            string decimal;
         }
     }
 }
 
 enum Tsort {
     ident,
-    litteral,
+    strLitteral,
+    numLitteral,
 
-    fnType,
+    // <bin_op>
     pairType,
     pairLitteral,
+    application,
+    fnType,
 
     fnLitteral,
-    application,
 
+    // ( <mutlisort> <bin_op> )
     pairTypeMulti,
     fnTypeMulti,
     pairLitteralMulti,
@@ -49,5 +63,6 @@ enum Tsort {
     dependentFunctionType,
     dependentPairType,
 
+    // <sort> :: <patt>
     inlineDeclaration
 }
