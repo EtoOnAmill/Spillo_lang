@@ -19,8 +19,9 @@
 %%
 // these are all expressions, called sorts because they can be at any level universe
 sort:
-    ident
-    | literal
+    NUM
+    | NUM '.' NUM
+    | ident
     | '(' sort ')'
 
     | sort sort '^' | '(' multisort "^)"
@@ -37,12 +38,6 @@ sort:
     | sort "::" '(' patt ')'
 ;
 
-number:
-    NUM
-    | NUM '.' NUM;
-literal:
-    number | "U" number;
-
 fnBranch:
     '>' patt guard ';' sort
     | ">>" patt guard ';' sort fnBranch
@@ -57,7 +52,7 @@ ident: WORD;
 patt:
     ident
     | '(' patt ')'
-    | literal | '~' ident | '~' '(' sort ')' // constant sort pattern matching
+    | '~' ident | '~' '(' sort ')' // constant sort pattern matching
     | '(' patt ':' sort ')'
     | patt "::" '(' patt ')'
     | patt patt '/' | '(' multipatt "/)";
