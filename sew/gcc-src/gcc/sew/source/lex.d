@@ -113,7 +113,7 @@ Token[] tokenize(string input) {
             extendToken(curr_char);
         })
     // if tok is litteral, check if char can forms multi_char litteral 
-        .to!(Ttype.litteral, any()) ((tt,ct) {
+        .to!(Ttype.reserved, any()) ((tt,ct) {
             match(token, curr_char)
             .to!(">", '>') (push_multichar_reserved)
             .to!(":", ':') (push_multichar_reserved)
@@ -197,7 +197,7 @@ struct Token {
 }
 
 enum Ttype {
-    litteral,
+    reserved,
     word,
     number,
     litStr,
@@ -213,7 +213,7 @@ enum ChrType {
 
 static assert(cast(ChrType) Ttype.number == ChrType.number);
 static assert(cast(ChrType) Ttype.word == ChrType.word);
-static assert(cast(ChrType) Ttype.litteral== ChrType.reserved);
+static assert(cast(ChrType) Ttype.reserved == ChrType.reserved);
 
 ChrType char_type(char cc) {
     switch (cc) {
@@ -242,7 +242,7 @@ Ttype identify(char string_start){
         case '&':
         case '|':
         case '~':
-            return Ttype.litteral;
+            return Ttype.reserved;
         case '`':
             return Ttype.litStr;
         default:
