@@ -14,7 +14,7 @@
 %right "::"
 %nonassoc '.'
 %precedence ':'
-%precedence '[' '_'
+%precedence '[' 
     // higher precedence
 
 // rules
@@ -24,27 +24,22 @@
 // in reality i want it so you can put them anywhere in the module
 module:
     "def" patt
-    | declarators patt '=' sort module
-    | "def" patt module;
+    | "def" patt module
+    | declarators patt '=' sort module;
 // like the module it contains all declaration but not "def" ones, every name must have a value attached to it
 set: | declarators patt '=' sort set;
 
 // valid keywords for declarations
-declarators: "let" | "rec" | "tot";
+declarators: "let" | "rec" | "tot" | "inf";
 
-// numbers tokens
-number:
-    NUM
-    | NUM '.' NUM;
-// litteral expression
-literal:
-    number | 'U' number | "set" | "module";
 // these are all expressions, called sorts because they can be at any level universe
 sort:
     ident
+    | NUM
+    | NUM '.' NUM
+    | "set" | "module" | "U"
 // sets like modules are first class citizens of the language
     | '{' set '}' | '{' module '}'
-    | literal
 // parenthesis shouldn't be needed for the compiler to understand but they are helpful to the programmer so here they are
     | '(' sort ')'
 // when the compiler can't figure out implicit arguments
@@ -60,7 +55,7 @@ sort:
 // type, like functions they always take 2 sort and can't curry
     | sort sort '%' | '(' multisort "%)"
 // declaration, like the type
-    | sort sort '/' | sort sort "/?" | '(' multisort "/)"
+    | sort sort '/' | '(' multisort "/)"
 
 // elimination, application, with RPN rules, fn on the right parameters on the left
 // for function is simple application, for pairs the first sort must be a positive whole number n
@@ -69,21 +64,25 @@ sort:
 // still don't know how and if i want to change it
     | sort sort '!' | '(' multisort "!)"
 
-// the parenthesis are just to help bison out
-// realistically they are only needed when the pattern is more than one token
-// for dependent type creation, it's the same as "patt : sort"
-    | sort '@' '(' patt ')' sort '%' | sort '@' '(' patt ')' " , " sort '%' | sort sort "%?"
-    | sort '@' '(' patt ')' sort '^' | sort '@' '(' patt ')' " . " sort '^' | sort sort "^?"
 // works like "patt = sort" without the need to break apart the expression
+// the scope is till the first binop of which the sort is part of 
     | sort "::" '(' patt ')'
 
-// transform a module into a set
-// in the brackets all "def" present in the module must be given a "let" or "rec" declaration with the same name and type
+// sort must be a module, with this syntax it'll get turn into a set
+// in the brackets all "def" present in the module must be given a declaration with the same name and type and a sort on the rhs of `=`
     | sort "::" '{' set '}'
 // this represents the type of a set where there are at least the element indicated in the brackets
     | "set::" '{' multipatt '}'
-// sort must be a set and ident must be declared inside, this expression has the type and value of the ident inside the set
-    | sort '@' ident
+
+// the `@` is the most complicated operator
+// in case the sort is of a universe higher than 0 then this is to be read as `patt : sort` and is useful for dependent type creation in the for `sort@patt sort <binop>`
+// in case the sort is a pair, patt must be either `st` or `nd` which are the names for the first and second element of a pair
+// in case the sort is a set, patt must be the ident of a declaration inside the set
+    | sort '@' '(' patt ')'
+// for dependent types, the first sort is applied to the second sort in a `sort1@a a sort2! <binop>`
+    | sort sort "^?"
+    | sort sort "%?"
+    | sort sort "/?"
 
 // if any fnBranch contains the duble greater (>>)
 // then the function is iterative and the expression in the (>>) branches gets used as parameters for the next iteration
@@ -92,8 +91,8 @@ sort:
 // iterative functions only work if the expression after the matched parameter isn't a function as you can't pattern match on functions
 fnBranch:
     '>' patt guard ';' sort
-    | ">>" patt guard ';' sort fnBranch
-    | '>' patt guard ';' sort fnBranch;
+    | '>' patt guard ';' sort fnBranch
+    | ">>" patt guard ';' sort fnBranch;
 
 // extra patterns to match
 // & guards have more precedence than | guards
@@ -110,11 +109,11 @@ ident: WORD;
 // the bread and butter of pattern matching
 patt:
 // match anything and bind to the identifier
-    '_' | ident
+    ident
 // same as the "(sort)" here to help the programmer not the compiler
     | '(' patt ')'
 // match with a constant expression
-    | literal | '~' ident | '~' '(' sort ')' // constant sort pattern matching
+    | '~' '(' sort ')' // constant sort pattern matching
 // match with explicit implicit arguments
 // in declarations it can be used to bring into context sorts without having to pass them explicitly every time the patt is used in the program
     | patt implicit_dec
