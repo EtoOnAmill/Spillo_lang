@@ -1,8 +1,6 @@
 import parse_items;
 import lex;
 
-
-
 ParseItem[] parse(Token[] input) {
     ParseItem[] ret = convert(input);
 
@@ -35,7 +33,7 @@ ParseItem[] convert(Token[] input) {
                 break;
             case Ttype.word:
                 to_append.type = PItype.ident;
-                to_append.ident.name = token.value;
+                to_append.ident = token.value;
                 break;
             case Ttype.reserved:
                 to_append.type = PItype.terminal;
@@ -53,7 +51,7 @@ struct ParseItem {
     Locus position;
     union {
         string terminal;
-        Ident ident;
+        string ident;
         Sort sort;
         FnBranch fnBranch;
         Guard guard;

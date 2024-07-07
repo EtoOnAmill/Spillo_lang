@@ -1,10 +1,31 @@
 import parse_items;
 
-struct MultiSort {
-    Tmulti type;
-    Locus position;
-    Sort* left;
-    MultiSort* right;
+
+enum Tsort {
+    ident,
+    strLitteral,
+    numLitteral,
+    numDecimals,
+
+    // <bin_op>
+    pairType,
+    pairLitteral,
+    application,
+    fnType,
+
+    fnLitteral,
+
+    // ( <mutlisort> <bin_op> )
+    pairTypeMulti,
+    fnTypeMulti,
+    pairLitteralMulti,
+    applicationMulti,
+
+    dependentFunctionType,
+    dependentPairType,
+
+    // <sort> :: <patt>
+    inlineDeclaration
 }
 
 struct Sort {
@@ -41,29 +62,54 @@ struct Sort {
     }
 }
 
-enum Tsort {
-    ident,
-    strLitteral,
-    numLitteral,
-    numDecimals,
 
-    // <bin_op>
-    pairType,
-    pairLitteral,
-    application,
-    fnType,
+struct MultiSort {
+    Tmulti type;
+    Locus position;
+    Sort* left;
+    MultiSort* right;
+}
 
-    fnLitteral,
+enum Tguard { and, or }
+struct Guard {
+    Tguard type;
+    union {
+        struct And {
+            Pattern patt;
+            Sort sort;
+            Guard* next;
+        }
+        struct Or {
+            Pattern patt;
+            Sort sort;
+        }
+    }
+}
 
-    // ( <mutlisort> <bin_op> )
-    pairTypeMulti,
-    fnTypeMulti,
-    pairLitteralMulti,
-    applicationMulti,
-
-    dependentFunctionType,
-    dependentPairType,
-
-    // <sort> :: <patt>
-    inlineDeclaration
+enum TfnBranch {
+    required, // `>`
+    extended, // `>`
+    extendedIterate, // `>>`
+}
+struct FnBranch {
+    TfnBranch type;
+    union {
+        struct Required {
+            Pattern patt;
+            Guard guard;
+            Sort sort;
+        }
+        struct Extended {
+            Pattern patt;
+            Guard guard;
+            Sort sort;
+            FnBranch* next;
+        }
+        struct ExtendedIterate {
+            Pattern patt;
+            Guard guard;
+            Sort sort;
+            FnBranch* next;
+        }
+    }
 }

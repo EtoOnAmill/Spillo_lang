@@ -1,7 +1,8 @@
-public import other;
 public import sort;
 public import patt;
 public import lex : size;
+
+enum Tmulti { pair, extended }
 
 struct Locus {
     size line_start;
