@@ -13,7 +13,6 @@ enum Tpattern {
 
 struct Pattern {
     Tpattern type;
-    Locus position;
     union {
         string ident;
         Sort* constexpr;

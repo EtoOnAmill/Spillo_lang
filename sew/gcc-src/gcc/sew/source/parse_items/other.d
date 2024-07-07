@@ -3,7 +3,6 @@ import parse_items;
 enum Tmulti { pair, extended }
 
 struct Ident {
-    Locus position;
     string name;
 }
 
@@ -11,7 +10,6 @@ struct Ident {
 enum Tguard { and, or }
 struct Guard {
     Tguard type;
-    Locus position;
     union {
         struct And {
             Pattern patt;
@@ -32,7 +30,6 @@ enum TfnBranch {
 }
 struct FnBranch {
     TfnBranch type;
-    Locus position;
     union {
         struct Required {
             Pattern patt;

@@ -9,10 +9,10 @@ struct MultiSort {
 
 struct Sort {
     Tsort type;
-    Locus position;
     union {
         string ident;
         string strLitteral;
+        string numLitteral;
         // all binary operator in a "( <multisort> <bin_op>)" situation
         MultiSort multiSort;
         // function declaration
@@ -33,7 +33,7 @@ struct Sort {
             Sort* sValue;
             Pattern* pAlias;
         }
-        // number litteral
+        // number decimals
         struct {
             string whole;
             string decimal;
@@ -45,6 +45,7 @@ enum Tsort {
     ident,
     strLitteral,
     numLitteral,
+    numDecimals,
 
     // <bin_op>
     pairType,

@@ -5,7 +5,7 @@ public import lex : size;
 
 struct Locus {
     size line_start;
-    size line_end;
     size column_start;
+    size line_end;
     size column_end;
 }
