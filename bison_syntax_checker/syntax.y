@@ -8,13 +8,7 @@
     // lower precedence
 %precedence '|'
 %precedence '&'
-%right ' '
-%precedence '/' '%' '!' '^'
-%left '@'
-%right "::"
-%nonassoc '.'
-%precedence ':'
-%precedence '[' 
+%right "::" "@" "="
     // higher precedence
 
 // rules
@@ -25,19 +19,18 @@
 module:
     "def" patt
     | "def" patt module
-    | declarators patt '=' sort module;
+    | declarators patt ":=" sort module;
 // like the module it contains all declaration but not "def" ones, every name must have a value attached to it
-set: | declarators patt '=' sort set;
+set: | declarators patt ":=" sort set;
 
 // valid keywords for declarations
 declarators: "let" | "rec" | "tot" | "inf";
 
 // these are all expressions, called sorts because they can be at any level universe
 sort:
-    ident
+    ident // includes "set" and "module"
     | NUM
     | NUM '.' NUM
-    | "set" | "module" | "U"
 // sets like modules are first class citizens of the language
     | '{' set '}' | '{' module '}'
 // parenthesis shouldn't be needed for the compiler to understand but they are helpful to the programmer so here they are
@@ -65,21 +58,19 @@ sort:
     | sort sort '!' | '(' multisort "!)"
 
 // works like "patt = sort" without the need to break apart the expression
-// the scope is till the first binop of which the sort is part of 
-    | sort "::" '(' patt ')'
+// the scope is till the first binop, other than "!", of which the sort is part of 
+    | sort "=" ident | sort "=" '(' patt ')'
 
-// sort must be a module, with this syntax it'll get turn into a set
-// in the brackets all "def" present in the module must be given a declaration with the same name and type and a sort on the rhs of `=`
-    | sort "::" '{' set '}'
-// this represents the type of a set where there are at least the element indicated in the brackets
-    | "set::" '{' multipatt '}'
+// similar to "=" but the pattern matches on a level lower than sort in a "patt : sort" relationship
+    | sort "::" ident | sort "::" '(' patt ')'
 
-// the `@` is the most complicated operator
-// in case the sort is of a universe higher than 0 then this is to be read as `patt : sort` and is useful for dependent type creation in the for `sort@patt sort <binop>`
-// in case the sort is a pair, patt must be either `st` or `nd` which are the names for the first and second element of a pair
-// in case the sort is a set, patt must be the ident of a declaration inside the set
-    | sort '@' '(' patt ')'
-// for dependent types, the first sort is applied to the second sort in a `sort1@a a sort2! <binop>`
+// accesses a variable inside sort, which can be either a set or a pair
+// if a set, patt references the element of the same name and type in the sort
+// if a pair the patt must be either "st" or "nd", referencing respectively the first and second element of the pair
+    | sort "@" ident | sort "@" '(' patt ')'
+
+
+// for dependent types, the first sort is applied to the second sort in a `sort1=a a sort2! <binop>`
     | sort sort "^?"
     | sort sort "%?"
     | sort sort "/?"
@@ -120,13 +111,13 @@ patt:
 // classic element type relationship
     | '(' patt ':' sort ')'
 // when you need to match the internal of something but you also need the whole
-    | patt "::" patt
+    | patt "=" ident | patt "=" '(' patt ')'
 // to match the inner element of a set
     | '{' set '}'
 // match on a ?????? in here only if in the future i can make inductive types work well enough
-    | patt ' ' patt '!' | '(' multipatt "!)"
+    | patt patt '!' | '(' multipatt "!)"
 // match on a pair
-    | patt ' ' patt '/' | '(' multipatt "/)";
+    | patt patt '/' | '(' multipatt "/)";
 
 multisort: sort sort | sort multisort;
 implicit: '[' multisort ']' | '[' sort ']';
