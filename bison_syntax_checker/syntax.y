@@ -81,9 +81,9 @@ sort:
 // otherwhise it acts as a simple function
 // iterative functions only work if the expression after the matched parameter isn't a function as you can't pattern match on functions
 fnBranch:
-    '>' patt guard ';' sort
-    | '>' patt guard ';' sort fnBranch
-    | ">>" patt guard ';' sort fnBranch;
+    '>' implicit_dec multipatt guard ';' sort
+    | '>' implicit_dec multipatt guard ';' sort fnBranch
+    | ">>" implicit_dec multipatt guard ';' sort fnBranch;
 
 // extra patterns to match
 // & guards have more precedence than | guards
@@ -105,9 +105,6 @@ patt:
     | '(' patt ')'
 // match with a constant expression
     | '~' '(' sort ')' // constant sort pattern matching
-// match with explicit implicit arguments
-// in declarations it can be used to bring into context sorts without having to pass them explicitly every time the patt is used in the program
-    | patt implicit_dec
 // classic element type relationship
     | '(' patt ':' sort ')'
 // when you need to match the internal of something but you also need the whole
@@ -122,7 +119,7 @@ patt:
 multisort: sort sort | sort multisort;
 implicit: '[' multisort ']' | '[' sort ']';
 multipatt: patt patt | patt multipatt;
-implicit_dec: '[' multipatt ']' | '[' patt ']';
+implicit_dec: | '[' multipatt ']' | '[' patt ']';
 %%
 
 // epilogue

@@ -9,9 +9,6 @@
     // lower precedence
 %precedence '|'
 %precedence '&'
-%precedence '/' '%' '!' '^'
-%left '@'
-%right "::"
 %precedence ':'
     // higher precedence
 
@@ -32,10 +29,8 @@ sort:
 
     | sort sort '!' | '(' multisort "!)"
 
-    | sort '@' '(' patt ')' sort '%'
-    | sort '@' '(' patt ')' sort '^'
-
     | sort "::" '(' patt ')'
+    | sort '=' '(' patt ')'
 ;
 
 fnBranch:
@@ -44,7 +39,7 @@ fnBranch:
     | '>' patt guard ';' sort fnBranch;
 
 guard:
-    | '&' patt '=' sort guard
+    | '&' patt ":=" sort guard
     | '|' patt guard ;
 
 ident: WORD;
@@ -52,9 +47,9 @@ ident: WORD;
 patt:
     ident
     | '(' patt ')'
-    | '~' ident | '~' '(' sort ')' // constant sort pattern matching
+    | '~' ident | '~' '(' sort ')' // static sort pattern matching
     | '(' patt ':' sort ')'
-    | patt "::" '(' patt ')'
+    | patt '=' '(' patt ')'
     | patt patt '/' | '(' multipatt "/)";
 
 multisort: sort sort | sort multisort;
