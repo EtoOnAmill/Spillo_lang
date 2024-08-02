@@ -1,9 +1,0 @@
-{
-	"authors": [
-		"etonit"
-	],
-	"copyright": "Copyright © 2024, etonit",
-	"description": "Spillo lang compiler",
-	"license": "GPL-2.0-or-later",
-	"name": "sew"
-}
