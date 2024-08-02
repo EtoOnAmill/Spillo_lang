@@ -34,40 +34,40 @@ sort:
 // sets like modules are first class citizens of the language
     | '{' set '}' | '{' module '}'
 // parenthesis shouldn't be needed for the compiler to understand but they are helpful to the programmer so here they are
-    | '(' sort ')'
+    | '[' sort ']'
 // when the compiler can't figure out implicit arguments
     | sort implicit
 
 // functions
 // type, always takes 2 sorts and doesn't curry
-    | sort sort '^' | '(' multisort "^)"
+    | sort sort '^' | '[' multisort "^]"
 // declaration, there are two types of function, more is explained at the fnBranch declaration
-    | '(' fnBranch ')'
+    | '[' fnBranch ']'
 
 // pairs
 // type, like functions they always take 2 sort and can't curry
-    | sort sort '%' | '(' multisort "%)"
+    | sort sort '%' | '[' multisort "%]"
 // declaration, like the type
-    | sort sort '/' | '(' multisort "/)"
+    | sort sort '/' | '[' multisort "/]"
 
 // elimination, application, with RPN rules, fn on the right parameters on the left
 // for function is simple application, for pairs the first sort must be a positive whole number n
 // it returns the nth element of the tuple
 // as it is rn the order of parameter in declaration and application is inverted
 // still don't know how and if i want to change it
-    | sort sort '!' | '(' multisort "!)"
+    | sort sort '!' | '[' multisort "!]"
 
 // works like "patt = sort" without the need to break apart the expression
 // the scope is till the first binop, other than "!", of which the sort is part of 
-    | sort "=" ident | sort "=" '(' patt ')'
+    | sort "=" ident | sort "=" '[' patt ']'
 
 // similar to "=" but the pattern matches on a level lower than sort in a "patt : sort" relationship
-    | sort "::" ident | sort "::" '(' patt ')'
+    | sort "::" ident | sort "::" '[' patt ']'
 
 // accesses a variable inside sort, which can be either a set or a pair
 // if a set, patt references the element of the same name and type in the sort
 // if a pair the patt must be either "st" or "nd", referencing respectively the first and second element of the pair
-    | sort "@" ident | sort "@" '(' patt ')'
+    | sort "@" ident | sort "@" '[' patt ']'
 
 
 // for dependent types, the first sort is applied to the second sort in a `sort1=a a sort2! <binop>`
@@ -101,25 +101,25 @@ ident: WORD;
 patt:
 // match anything and bind to the identifier
     ident
-// same as the "(sort)" here to help the programmer not the compiler
-    | '(' patt ')'
+// same as the "[sort]" here to help the programmer not the compiler
+    | '[' patt ']'
 // match with a constant expression
-    | '~' '(' sort ')' // constant sort pattern matching
+    | '~' '[' sort ']' // constant sort pattern matching
 // classic element type relationship
-    | '(' patt ':' sort ')'
+    | '[' patt ':' sort ']'
 // when you need to match the internal of something but you also need the whole
-    | patt "=" ident | patt "=" '(' patt ')'
+    | patt "=" ident | patt "=" '[' patt ']'
 // to match the inner element of a set
     | '{' set '}'
 // match on a ?????? in here only if in the future i can make inductive types work well enough
-    | patt patt '!' | '(' multipatt "!)"
+    | patt patt '!' | '[' multipatt "!]"
 // match on a pair
-    | patt patt '/' | '(' multipatt "/)";
+    | patt patt '/' | '[' multipatt "/]";
 
 multisort: sort sort | sort multisort;
-implicit: '[' multisort ']' | '[' sort ']';
+implicit: '(' multisort ')' | '(' sort ')';
 multipatt: patt patt | patt multipatt;
-implicit_dec: | '[' multipatt ']' | '[' patt ']';
+implicit_dec: | '(' multipatt ')' | '(' patt ')';
 %%
 
 // epilogue
