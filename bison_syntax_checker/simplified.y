@@ -19,18 +19,18 @@ sort:
     NUM
     | NUM '.' NUM
     | ident
-    | '(' sort ')'
+    | '[' sort ']'
 
-    | sort sort '^' | '(' multisort "^)"
-    | '(' fnBranch ')'
+    | sort sort '^' | '[' multisort "^]"
+    | '[' fnBranch ']'
 
-    | sort sort '%' | '(' multisort "%)"
-    | sort sort '/' | '(' multisort "/)"
+    | sort sort '%' | '[' multisort "%]"
+    | sort sort '/' | '[' multisort "/]"
 
-    | sort sort '!' | '(' multisort "!)"
+    | sort sort '!' | '[' multisort "!]"
 
-    | sort "::" '(' patt ')'
-    | sort '=' '(' patt ')'
+    | sort "::" '[' patt ']'
+    | sort "=:" '[' patt ']'
 ;
 
 fnBranch:
@@ -46,11 +46,11 @@ ident: WORD;
 
 patt:
     ident
-    | '(' patt ')'
-    | '~' ident | '~' '(' sort ')' // static sort pattern matching
-    | '(' patt ':' sort ')'
-    | patt '=' '(' patt ')'
-    | patt patt '/' | '(' multipatt "/)";
+    | '[' patt ']'
+    | '~' ident | '~' '[' sort ']' // static sort pattern matching
+    | '[' patt ':' sort ']'
+    | patt '=' '[' patt ']'
+    | patt patt '/' | '[' multipatt "/]";
 
 multisort: sort sort | sort multisort;
 multipatt: patt patt | patt multipatt;
