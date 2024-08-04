@@ -1,3 +1,5 @@
+*.beam
+
 */target/*
 oldvers
 installation
