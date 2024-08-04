@@ -1,0 +1,241 @@
+module 'lex' ['lex'/1,
+	      'lex_one'/1,
+	      'module_info'/0,
+	      'module_info'/1]
+    attributes [
+		'file' =
+		    [{[108|[101|[120|[46|[101|[114|[108]]]]]]],1}]]
+
+'lex'/1 =
+    ( fun (_0) ->
+	  ( case ( _0
+		   -| [{'function',{'lex',1}}] ) of
+	      <[]> when 'true' ->
+		  []
+	      <Str> when 'true' ->
+		  case apply 'lex_one'/1
+			   (Str) of
+		    <{'ignore',_4,Rest}> when 'true' ->
+			apply 'lex'/1
+			    (Rest)
+		    <{Ttype,Token,Rest}> when 'true' ->
+			let <_1> =
+			    apply 'lex'/1
+				(Rest)
+			in  [{Ttype,Token}|_1]
+		    ( <_2> when 'true' ->
+			  primop 'match_fail'
+			      ({'case_clause',_2})
+		      -| ['compiler_generated'] )
+		  end
+	    end
+	    -| [{'function',{'lex',1}}] )
+      -| [{'function',{'lex',1}}] )
+
+
+'lex_one'/1 =
+    ( fun (_0) ->
+	  ( case ( _0
+		   -| [{'function',{'lex_one',1}}] ) of
+	      <[]> when 'true' ->
+		  {[],[]}
+	      <_@r0 = [Chr|Tail]> when 'true' ->
+		  case call 'lists':'member'
+			   (Chr, [32|[9|[10|[11|[13]]]]]) of
+		    <'true'> when 'true' ->
+			{'ignore','whiteSpace',Tail}
+		    <'false'> when 'true' ->
+			case Chr of
+			  <96> when 'true' ->
+			      let <IsntBackTick> =
+				  fun (_3) ->
+				      case _3 of
+					<96> when 'true' ->
+					    'false'
+					<_25> when 'true' ->
+					    'true'
+				      end
+			      in  let <_30,_31> =
+				      case 
+					   apply 'take_while'/2
+					       (IsntBackTick, Tail) of
+					<{T,[96|Rest]}> when 'true' ->
+					    <T,Rest>
+					<_26> when 'true' ->
+					    call 'erlang':'throw'
+						([85|[110|[99|[108|[111|[115|[101|[100|[32|[100|[101|[108|[105|[109|[105|[116|[101|[114|[44|[32|[101|[120|[112|[101|[99|[116|[101|[100|[32|[39|[96|[39]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]])
+				      end
+				  in  
+				      {'string',( _30
+						  -| ['compiler_generated'] ),( _31
+										-| ['compiler_generated'] )}
+			  <35> when 'true' ->
+			      let <IsntOctothorp> =
+				  fun (_9) ->
+				      case _9 of
+					<35> when 'true' ->
+					    'false'
+					<_27> when 'true' ->
+					    'true'
+				      end
+			      in  let <_36,_37> =
+				      case 
+					   apply 'take_while'/2
+					       (IsntOctothorp, Tail) of
+					<{T,[35|Rest]}> when 'true' ->
+					    <T,Rest>
+					<{T,[]}> when 'true' ->
+					    <T,[]>
+					<_28> when 'true' ->
+					    call 'erlang':'throw'
+						([85|[110|[99|[108|[111|[115|[101|[100|[32|[100|[101|[108|[105|[109|[105|[116|[101|[114|[44|[32|[101|[120|[112|[101|[99|[116|[101|[100|[32|[39|[35|[39]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]])
+				      end
+				  in  
+				      {'ignore',( _36
+						  -| ['compiler_generated'] ),( _37
+										-| ['compiler_generated'] )}
+			  <C> when 'true' ->
+			      case call 'lists':'member'
+				       (C, [94|[33|[37|[47|[124|[38|[58|[91|[93|[61|[62|[59|[126|[96|[46|[44|[35|[32|[9|[10|[11|[13]]]]]]]]]]]]]]]]]]]]]]) of
+				<'true'> when 'true' ->
+				    case <Chr,Tail> of
+				      <( 58
+					 -| ['compiler_generated'] ),( [( 58
+									  -| ['compiler_generated'] )|TTail]
+								       -| ['compiler_generated'] )> when 'true' ->
+					  {'reserved',[58|[58]],TTail}
+				      <( 62
+					 -| ['compiler_generated'] ),( [( 62
+									  -| ['compiler_generated'] )|TTail]
+								       -| ['compiler_generated'] )> when 'true' ->
+					  {'reserved',[62|[62]],TTail}
+				      <( 61
+					 -| ['compiler_generated'] ),( [( 58
+									  -| ['compiler_generated'] )|TTail]
+								       -| ['compiler_generated'] )> when 'true' ->
+					  {'reserved',[61|[58]],TTail}
+				      <( 58
+					 -| ['compiler_generated'] ),( [( 61
+									  -| ['compiler_generated'] )|TTail]
+								       -| ['compiler_generated'] )> when 'true' ->
+					  {'reserved',[58|[61]],TTail}
+				      <( 94
+					 -| ['compiler_generated'] ),( [( 93
+									  -| ['compiler_generated'] )|TTail]
+								       -| ['compiler_generated'] )> when 'true' ->
+					  {'reserved',[94|[93]],TTail}
+				      <( 37
+					 -| ['compiler_generated'] ),( [( 93
+									  -| ['compiler_generated'] )|TTail]
+								       -| ['compiler_generated'] )> when 'true' ->
+					  {'reserved',[37|[93]],TTail}
+				      <( 47
+					 -| ['compiler_generated'] ),( [( 93
+									  -| ['compiler_generated'] )|TTail]
+								       -| ['compiler_generated'] )> when 'true' ->
+					  {'reserved',[47|[93]],TTail}
+				      <( 33
+					 -| ['compiler_generated'] ),( [( 93
+									  -| ['compiler_generated'] )|TTail]
+								       -| ['compiler_generated'] )> when 'true' ->
+					  {'reserved',[33|[93]],TTail}
+				      <( _42
+					 -| ['compiler_generated'] ),( _43
+								       -| ['compiler_generated'] )> when 'true' ->
+					  {'reserved',[C|[]],Tail}
+				    end
+				<'false'> when 'true' ->
+				    let <IsntReserved> =
+					fun (_17) ->
+					    let <_16> =
+						call 
+						     'lists':
+							     'member'
+						    (
+						     _17, [94|[33|[37|[47|[124|[38|[58|[91|[93|[61|[62|[59|[126|[96|[46|[44|[35|[32|[9|[10|[11|[13]]]]]]]]]]]]]]]]]]]]]])
+					    in  
+						call 'erlang':'not'
+						    (_16)
+				    in  let <_20> =
+					    apply 
+						  'take_while'/2
+						(
+						 IsntReserved, 
+							       _@r0)
+					in  
+					    call 'erlang':'insert_element'
+						(1, _20, 'word')
+				( <_21> when 'true' ->
+				      primop 'match_fail'
+					  ({'case_clause',_21})
+				  -| ['compiler_generated'] )
+			      end
+			end
+		    ( <_23> when 'true' ->
+			  primop 'match_fail'
+			      ({'case_clause',_23})
+		      -| ['compiler_generated'] )
+		  end
+	      ( <_24> when 'true' ->
+		    ( primop 'match_fail'
+			  (( {'function_clause',_24}
+			     -| [{'function',{'lex_one',1}}] ))
+		      -| [{'function',{'lex_one',1}}] )
+		-| ['compiler_generated'] )
+	    end
+	    -| [{'function',{'lex_one',1}}] )
+      -| [{'function',{'lex_one',1}}] )
+
+
+'take_while'/2 =
+    ( fun (_0,_1) ->
+	  let <Helper> =
+	      letrec
+		  'Hlp'/2 =
+		      ( fun (_6,_5) ->
+			    let <Hlp> = 'Hlp'/2
+			    in  case <_6,_5> of
+				  <[],Acc> when 'true' ->
+				      let <_2> =
+					  call 'lists':'reverse'
+					      (Acc)
+				      in  {_2,[]}
+				  <Whole = [Chr|Rest],Acc> when 'true' ->
+				      case apply _0
+					       (Chr) of
+					<'true'> when 'true' ->
+					    apply Hlp
+						(Rest, [Chr|Acc])
+					<'false'> when 'true' ->
+					    let <_3> =
+						call 'lists':'reverse'
+						    (Acc)
+					    in  {_3,Whole}
+					( <_4> when 'true' ->
+					      primop 'match_fail'
+						  ({'case_clause',_4})
+					  -| ['compiler_generated'] )
+				      end
+				  ( <_8,_7> when 'true' ->
+					primop 'match_fail'
+					    ({'function_clause',_8,_7})
+				    -| ['compiler_generated'] )
+				end
+			-| [{'id',{0,0,'-take_while/2-fun-0-'}}] )
+	      in  'Hlp'/2
+	  in  
+	      apply Helper
+		  (_1, [])
+      -| [{'function',{'take_while',2}}] )
+'module_info'/0 =
+    ( fun () ->
+	  call 'erlang':'get_module_info'
+	      ('lex')
+      -| [{'function',{'module_info',0}}] )
+'module_info'/1 =
+    ( fun (_0) ->
+	  call 'erlang':'get_module_info'
+	      ('lex', ( _0
+			-| [{'function',{'module_info',1}}] ))
+      -| [{'function',{'module_info',1}}] )
+end
