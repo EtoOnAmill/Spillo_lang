@@ -5,6 +5,7 @@
 
 %token NUM
 %token WORD
+%token STR
 // declarations
     // lower precedence
 %precedence '|'
@@ -18,42 +19,47 @@
 sort:
     NUM
     | NUM '.' NUM
-    | ident
+    | WORD
+    | STR
     | '[' sort ']'
 
-    | sort sort '^' | '[' multisort "^]"
-    | '[' fnBranch ']'
+    | '>' fnBranch '<' | sort '(' multisort ')'
 
-    | sort sort '%' | '[' multisort "%]"
-    | sort sort '/' | '[' multisort "/]"
+    | sort sort binop
+    | '[' sort multisort multibinop
 
-    | sort sort '!' | '[' multisort "!]"
-
-    | sort "::" '[' patt ']'
-    | sort "=:" '[' patt ']'
+    | sort "::" '(' patt ')'
+    | sort "=:" '(' patt ')'
 ;
 
+binop: '^' | '!' | '%' | '/';
+multibinop: "^]" | "!]" | "%]" | "/]";
+
 fnBranch:
-    '>' patt guard ';' sort
-    | ">>" patt guard ';' sort fnBranch
-    | '>' patt guard ';' sort fnBranch;
+    patt guard ';' sort
+    | patt guard ';' sort '?'
+    | patt guard ';' sort '?' '\\' fnBranch
+    | patt guard ';' sort '\\' fnBranch;
 
 guard:
     | '&' patt ":=" sort guard
-    | '|' patt guard ;
-
-ident: WORD;
+    | '|' patt guard;
 
 patt:
-    ident
+    WORD
+    | STR
+    | NUM
+    | NUM '.' NUM
     | '[' patt ']'
-    | '~' ident | '~' '[' sort ']' // static sort pattern matching
-    | '[' patt ':' sort ']'
+    | '~' WORD | '~' '[' sort ']' // static sort pattern matching
+    | patt ':' WORD
+    | patt ':' '[' sort ']'
+    | patt '=' WORD
     | patt '=' '[' patt ']'
-    | patt patt '/' | '[' multipatt "/]";
+    | patt patt '/' | '[' patt multipatt "/]";
 
-multisort: sort sort | sort multisort;
-multipatt: patt patt | patt multipatt;
+multisort: sort | sort multisort;
+multipatt: patt | patt multipatt;
 %%
 
 // epilogue
