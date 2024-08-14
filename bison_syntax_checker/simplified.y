@@ -38,8 +38,9 @@ multibinop: "^]" | "!]" | "%]" | "/]";
 fnBranch:
     patt guard ';' sort
     | patt guard ';' sort '?'
+    | patt guard ';' sort '\\' fnBranch
     | patt guard ';' sort '?' '\\' fnBranch
-    | patt guard ';' sort '\\' fnBranch;
+    | patt guard ';' sort '?' fnBranch;
 
 guard:
     | '&' patt ":=" sort guard

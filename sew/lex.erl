@@ -1,54 +1,73 @@
 -module(lex).
--export([lex/1, lex_one/1]).
+-export([lex/1, lex_one/2]).
+
+%% tokentype ::= ignore | eof | word | string | number
+
 
 %% string -> list tokens
-lex([]) -> [];
-lex(Str) ->
-    case  lex_one(Str) of
-        {ignore, _, Rest} -> lex(Rest);
-        {Ttype, Token, Rest} -> [{Ttype,Token}|lex(Rest)]
+lex(Str) -> lex(Str,{1,1}).
+%% string -> list tokens
+lex([],Pos) -> [{eof,Pos} |[]];
+lex(Str, Pos) ->
+    case  lex_one(Str, Pos) of
+        {ignore, _, NewPos, Rest} -> lex(Rest, NewPos);
+        {Ttype, Token, NewPos, Rest} -> [{Ttype, Pos, Token}|lex(Rest, NewPos)]
     end.
 
-%% string * string -> {token , string}
-lex_one([]) -> {"", []};
-lex_one([Chr|Tail]) ->
+%% string * pos -> {ttype, pos, string, {newpos, string}}
+lex_one([], Pos) -> {eof,Pos};
+lex_one([Chr|Tail], {Line,Column}) ->
     WhiteSpace=[$\s,$\t,$\n,$\v,$\r],
-    Reserved=[$^,$!,$%,$/,$|,$&,$:,$[,$],$=,$>,$;,$~,$`,$.,$,,$#|WhiteSpace],
+    Reserved=[$^,$!,$%,$/,$|,$&,$:,${,$},$[,$],$(,$),$=,$>,$;,$~,$`,$.,$,,$#|WhiteSpace],
+    NewPosition = fun(Token) -> 
+        LineSplit=string:split(Token, "\n", all),
+        NewLine= Line + length(LineSplit) - 1, %% length returns 1 in case of no split 
+        NewColumn = (if Line == NewLine -> Column; true -> 1 end) + string:length(lists:last(LineSplit)),
+        {NewLine, NewColumn}
+    end,
 
     case lists:member(Chr, WhiteSpace) of
-        true -> {ignore, whiteSpace, Tail};
+        true -> {ignore, whiteSpace, NewPosition([Chr]), Tail};
         false ->
         (case Chr of
+            N when N >= $0, N =< $9 %% the comma is the boolean and
+            -> {Token, Rem} = take_number([Chr|Tail]),
+                %
+                {number, Token, NewPosition(Token), Rem};
             $` ->
                 IsntBackTick = fun($`) -> false; (_) -> true end,
                 {Token, Rem} = case take_while(IsntBackTick, Tail) of
                     {T, [$`|Rest]} -> {T, Rest};
                     _ -> throw("Unclosed delimiter, expected '`'")
                 end,
-                {string, Token, Rem};
+                {NewLine, NewColumn} = NewPosition(Token),
+                {string, Token, {NewLine, NewColumn + 1}, Rem};
             $# ->
                 IsntOctothorp = fun($#) -> false; (_) -> true end,
-                {Token, Rem} = case take_while(IsntOctothorp, Tail) of
-                    {T, [$#|Rest]} -> {T, Rest};
-                    {T, []} -> {T, []};
+                {Token, Rem, Delimited} = case take_while(IsntOctothorp, Tail) of
+                    {T, [$#|Rest]} -> {T, Rest, true};
+                    {T, []} -> {T, [], false};
                     _ -> throw("Unclosed delimiter, expected '#'")
                 end,
-                {ignore, Token, Rem};
+                {NewLine, NewColumn} = NewPosition(Token),
+                NewerColumn = NewColumn + (if Delimited -> 1; true -> 0 end),
+                {ignore, Token, {NewLine, NewerColumn}, Rem};
             C  -> case lists:member(C, Reserved) of
                 true -> case [Chr|Tail] of
-                    [$:,$:|TTail] -> {reserved, "::", TTail};
-                    [$>,$>|TTail] -> {reserved, ">>", TTail};
-                    [$=,$:|TTail] -> {reserved, "=:", TTail};
-                    [$:,$=|TTail] -> {reserved, ":=", TTail};
-                    [$^,$]|TTail] -> {reserved, "^]", TTail};
-                    [$%,$]|TTail] -> {reserved, "%]", TTail};
-                    [$/,$]|TTail] -> {reserved, "/]", TTail};
-                    [$!,$]|TTail] -> {reserved, "!]", TTail};
-                    _ -> {reserved, [C], Tail}
+                    [$:,$:|TTail] -> {reserved, "::", NewPosition(".."), TTail};
+                    [$>,$>|TTail] -> {reserved, ">>", NewPosition(".."), TTail};
+                    [$=,$:|TTail] -> {reserved, "=:", NewPosition(".."), TTail};
+                    [$:,$=|TTail] -> {reserved, ":=", NewPosition(".."), TTail};
+                    [$^,$]|TTail] -> {reserved, "^]", NewPosition(".."), TTail};
+                    [$%,$]|TTail] -> {reserved, "%]", NewPosition(".."), TTail};
+                    [$/,$]|TTail] -> {reserved, "/]", NewPosition(".."), TTail};
+                    [$!,$]|TTail] -> {reserved, "!]", NewPosition(".."), TTail};
+                    _ -> {reserved, [Chr], NewPosition("."), Tail}
                     end;
                 false ->
                     IsntReserved = fun(CC) -> not lists:member(CC, Reserved) end,
-                    erlang:insert_element(1, take_while(IsntReserved,  [Chr|Tail]), word) 
+                    {Word, Rest} = take_while(IsntReserved,  [Chr|Tail]),
+                    {word, Word, NewPosition(Word), Rest}
                 end
             end)
         end.
@@ -62,3 +81,9 @@ take_while(Fn, List) ->
             false -> {lists:reverse(Acc), Whole} end
     end,
     Helper(List, []).
+
+
+%% string -> {string, string}
+take_number(Str) -> 
+    Is_decimal = fun(N) when N >= $0, N =< $9 -> true; (_) -> false end,
+    take_while( Is_decimal , Str).
