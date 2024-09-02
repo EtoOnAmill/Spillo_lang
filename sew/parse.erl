@@ -2,14 +2,11 @@
 -export([parse/1]).
 
 %% list tokens -> AST
-parse(Tokens) -> parser.
+parse(Tokens) -> 
+    lr_parse(token_to_terminal(Tokens)).
+
+lr_parse(Input) -> ok.
  
-%% element stack * State stack * list tokens -> {AST, list tokens}
-%% token ::= {tokentype, pos, value}
-%% tokentype ::= ignore | eof | word | string | number
-%% State ::= [type, Id, Values...]
-%% elementType ::= sort | fnBranch | guard | patt | multisort | multipatt
-%% the state stack is built backward since lists have the head on the left
 
 token_to_terminal({reserved, Pos, Value}) -> [reserved, list_to_atom(Value), Pos];
 token_to_terminal({eof, Pos}) -> [eof, Pos];

@@ -3,6 +3,8 @@
     // prologue
 %}
 
+%define lr.type ielr
+
 %token NUM
 %token WORD
 %token STR
@@ -10,57 +12,51 @@
     // lower precedence
 %precedence '|'
 %precedence '&'
-%precedence ':'
     // higher precedence
 
 // rules
 %%
 // these are all expressions, called sorts because they can be at any level universe
 sort:
+    litterals
+    | '[' sort ']'
+    | '>' fnBranch '<'
+    | sort sort binop
+    | sort "::" pattunit sort typebinop
+    | sort "=:" pattunit sort '/' ;
+
+patt:
+    litterals
+    | '[' patt ']'
+    | '~' sortunit // static sort pattern matching
+    | patt ':' sortunit
+    | patt '=' pattunit
+    | patt patt '/' ;
+
+fnBranch:
+    patt andguard orguard ';' sort
+    | patt andguard orguard ';' sort '?'
+    | patt andguard orguard ';' sort '\\' fnBranch
+    | patt andguard orguard ';' sort '?' '\\' fnBranch;
+
+orguard:
+    | '|' patt andguard orguard;
+andguard:
+    | '&' patt ":=" sort andguard;
+
+litterals: 
     NUM
     | NUM '.' NUM
     | WORD
-    | STR
-    | '[' sort ']'
+    | STR ;
 
-    | '>' fnBranch '<' | sort '(' multisort ')'
+binop: typebinop | sortbinop;
+typebinop: '^' | '%';
+sortbinop: '!' | '/';
 
-    | sort sort binop
-    | '[' sort multisort multibinop
+pattunit: litterals | '(' patt ')';
+sortunit: litterals | '(' sort ')';
 
-    | sort "::" '(' patt ')'
-    | sort "=:" '(' patt ')'
-;
-
-binop: '^' | '!' | '%' | '/';
-multibinop: "^]" | "!]" | "%]" | "/]";
-
-fnBranch:
-    patt guard ';' sort
-    | patt guard ';' sort '?'
-    | patt guard ';' sort '\\' fnBranch
-    | patt guard ';' sort '?' '\\' fnBranch
-    | patt guard ';' sort '?' fnBranch;
-
-guard:
-    | '&' patt ":=" sort guard
-    | '|' patt guard;
-
-patt:
-    WORD
-    | STR
-    | NUM
-    | NUM '.' NUM
-    | '[' patt ']'
-    | '~' WORD | '~' '[' sort ']' // static sort pattern matching
-    | patt ':' WORD
-    | patt ':' '[' sort ']'
-    | patt '=' WORD
-    | patt '=' '[' patt ']'
-    | patt patt '/' | '[' patt multipatt "/]";
-
-multisort: sort | sort multisort;
-multipatt: patt | patt multipatt;
 %%
 
 // epilogue

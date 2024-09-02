@@ -1,0 +1,308 @@
+LR parsing algorithm
+let ° be the position of the parse
+let ~ be the eof
+let -- be the separator for the lookahead
+create items by starting with
+S' -> ° S -- ~
+and adding all production for non terminals when they appear at the right of °
+the lookahead is the same as the item it generated from if it's one element production
+else it's the first terminal in all the production
+for a simple grammar
+0   S'-> S
+1   S -> _
+2   S -> a A b S
+3   S -> b B a S
+4   A -> _
+5   A -> a A b A
+6   B -> _
+7   B -> b B a B
+
+the items(I) would be
+
+i0
+    S'-> ° S -- ~            g i1
+    S -> _ ° -- ~            r 1
+    S -> ° a A b S -- ~      s i3
+    S -> ° b B a S -- ~      s i2
+i1
+    S' -> S ° -- ~           r 0
+i2
+    S -> b ° B a S -- ~      g i6
+    B -> _ ° -- a            r 6
+    B -> ° b B a B -- a      s i7
+i3
+    S -> a ° A b S -- ~      g i4
+    A -> _ ° -- b            r 4
+    A -> ° a A b A -- b      s i5
+i4
+    S -> a A ° b S -- ~      s i11
+i5
+    A -> a ° A b A -- b      g i10
+    A -> _ ° -- b            r 4
+    A -> ° a A b A -- b      s i5
+i6
+    S -> b B ° a S -- ~      s i9
+i7
+    B -> b ° B a B -- a      g i8
+    B -> _ ° -- a            r 6
+    B -> ° b B a B -- a      s i7
+i8
+    B -> b B ° a B -- a      s i15
+i9
+    S -> b B a ° S -- ~      g i14
+    S -> _ ° -- ~            r 1
+    S -> ° a A b S -- ~      s i3
+    S -> ° b B a S -- ~      s i2
+i10
+    A -> a A ° b A -- b      s i13
+i11
+    S -> a A b ° S -- ~      g i12
+    S -> _ ° -- ~            r 1
+    S -> ° a A b S -- ~      s i3
+    S -> ° b B a S -- ~      s i2
+i12
+    S -> a A b S ° -- ~      r 2
+i13
+    A -> a A b ° A -- b      g i17
+    A -> _ ° -- b            r 4
+    A -> ° a A b A -- b      s i5
+i14
+    S -> b B a S ° -- ~      r 3
+i15
+    B -> b B a ° B -- a      g i16
+    B -> _ ° -- a            r 6
+    B -> ° b B a B -- a      s i7
+i16
+    B -> b B a B ° -- a      r 7
+i17
+    A -> a A b A ° -- b      r 5
+
+
+table
+state        lookahead
+
+            ~   a   b     S   A   B  
+0          r1  s3  s2    g1   _   _
+1          r0   _   _     _   _   _
+2           _  r6  s7     _   _  g6
+3           _  s5  r4     _  g4   _
+4           _   _  s11    _   _   _
+5           _  s5  r4     _  g10  _
+6           _  s9   _     _   _   _
+7           _  r6  s7     _   _  g8
+8           _  s15  _     _   _   _
+9          r1  s3  s2    g14  _   _
+10          _   _  s13    _   _   _
+11         r1  s3  s2    g12  _   _
+12         r2   _   _     _   _   _
+13          _  s5  r4     _  g17  _
+14         r3   _   _     _   _   _
+15          _  r6  s7     _   _  g16
+16          _  r7   _     _   _   _
+17          _   _  r5     _   _   _
+
+
+
+LR
+two sets:
+    I = intermediates, denotated by uppercase letters
+    T = terminals, denotated by lowercse letters
+X Y Z will denote either
+W     will denote their union
+a grammar item is any I or T in a grammar
+
+S = principal intemediate character
+strings of characters will be denoted by ° & % $ # @
+empty string will be _
+°^n = the string ° n times
+
+a production is a relation A -> W
+a sentential form is any string ° for which S => °
+
+a grammar is a set of productions.
+to have ° -> % with respecto to a grammar we need strings & $ # A
+    such that
+        ° = & A #
+        % = & $ #
+    and A -> $ is a production in the grammar
+
+transitive completion: # => @ means that # = #0 -> #1 ->...-> #n = @
+# ==> @ means either # = @ or # -> @
+
+the language defined by a grammar is
+    { ° | S => ° and ° is a string of terminals }
+
+given a grammar {
+    S -> AD,
+    A -> aC,
+    B -> bcd,
+    C -> BE,
+    D -> _,
+    E -> e }
+it defines the string "abcde"
+leftmost derivation
+    S -> AD -> aCD -> aBED -> abcdED -> abcdeD -> abcde
+rightmost derivation
+    S -> AD -> A -> aC -> aBE -> aBe -> abcde
+
+a handle is the leftmost set of adjacent leaves forming a complete branch
+which means that we are looking for the smallest k for which
+    X(i) X(i+1) ... X(k) -> Y
+where X(1-n) are the leaves of the tree such that X(j) : W
+
+if we imagine the grammar as a tree with S as root, developing upward by following the derivation rules
+and pruning off it's handle untill only S is left, we obtain the rightmost derivation in reverse.
+Another way to describe the process is to say that all leaves to the right of the handle are terminals
+
+to produce a pasing process number all the productions of the grammar from 1 to s where s is the total number of productions
+suppose
+    ° is a sentential form(any string derivable from the grammar)
+    ° = X1 ... Xn ... Xt
+    there is a derivation tree with handle X(r+1) ... Xn of the `p`th production
+    with (0 <eq r <eq n <eq t, 1 <eq p <eq s), then (n, p) is a handle of °
+    n represents the `n`th grammar item in °
+    p represents the `p`th production in the grammar where S => °
+if ° is a string in a grammar G
+if the `n`th grammar item in ° appears at
+    the rightmost of a handle of a derivation tree of a production in G
+and by numbering the productions in G the number of the production is p
+then the tuple (n, p) is a hanle of °
+
+a grammar is considered LR(k) only if the handle for it can be uniquely determined by the string on the left
+of the handle and k items on the right
+every LR(k) grammar is unanbigous
+
+2. analysis of LR(k) grammars
+for a grammar G and a k >eq 0 there are two ways to test wether G is LR(k)
+assume G doesn't have useless productions, as there are strings of terminals ° % $ and A:I
+such that
+    S ==> ° A $ => ° % $
+
+first method is to construct another grammar GG which reflects all configurations of a handle and lookahead
+the intermediate symbols will be [A; °] where ° is a k-letter string of terminals or ~ (end of file)
+and also [p] where p is the number of production
+the terminal symbols of GG will be W union ~
+
+Hk(%) is the set of all (& $) of k elements:(T|~) derivable from % with G productions for some $
+it is the set of all possible initial strings of length k derivable from % with G productions
+
+let the `p`th production of G be
+    Ap -> Xp1 ... Xp(np)
+    with 1 <eq p <eq s(total number of productions), np >eq 0
+costruct all productions of GG with
+    [Ap; °] -> Xp1 ... Xp(j-1) [Xpj; &]
+    where 1 <eq j <eq np, and Xpj:I, and ° and & are k-terminal strings
+    with & in Hk( Xp(j+1) ... Xp(np) ° )
+    and also the production
+    [Ap; °] -> Xp1 ... Xp(np) ° [p]
+
+with respect to GG
+    [S; ~^k] => X1 ... Xn X(n+1) .. X(n+k) [p]
+if and only if there is a k-sentential form
+    X1 ... Xn X(n+1) .. X(n+k) Y1 ... Yu
+    with handle (n, p) and with X(n+1) ... Yu all non intermediates
+
+G is LR(k) if and only if GG satisfies
+    [S; ~^k] => °:W[p]
+    [S; ~^k] => ° $ [q] implies $=_ and p=q
+basically if GG can produce the same string after which there is either a production p or an empty string and the production p
+
+the GG(2) for { S -> AD,    A -> aC,    B -> bcd,    C -> BE,    D -> _,    E -> e } would be
+    [S; ~ ~] -> [A; ~ ~]
+    [S; ~ ~] -> A [D; ~ ~]
+    [S; ~ ~] -> A D ~ ~ [1]
+    [A; ~ ~] -> a [C; ~ ~]
+    [A; ~ ~] -> a C ~ ~ [2]
+    [D; ~ ~] -> ~ ~ [5]
+    [C; ~ ~] -> [B; e ~]
+    [C; ~ ~] -> B [E; ~ ~]
+    [C; ~ ~] -> B E ~ ~ [4]
+    [B; e ~] -> bcd e ~ [3]
+    [E; ~ ~] -> e ~ ~ [6]
+
+the second method for checking LR(k) grammars
+having empty derivations (A -> _) can complicate things
+so we define H'k(°) to be equal to Hk(°) without derivations that contain A$ -> $
+this way we avoid derivation trees whose handle is an empty string on the extreme left
+
+in the grammar {
+    S -> B C ~ ~ ~,
+    B -> C e,
+    B -> _,
+    C -> D,
+    C -> D c,
+    D -> _,
+    D -> d }
+we have
+    H3(S) = { ~~~, c~~, ce~, cec, ced, d~~, dce, de~, dec, ded, e~~, ec~, ed~, edc }
+    H'3(S) = { dce, de~, dec, ded }
+
+to check a grammar G(k) we first create the production
+    S0 -> S ~^k
+so that sentential forms are now equal to k-sentential forms
+
+we will base our construct based on "state" [p, j; $]
+where p is the number of a production, 0 <eq j <eq np(number of items in the production)
+$ is a k-letter string of terminals representing the lookahead
+we are in a state [p, j; $] if the partial parse so far has the form % Xp1 ... Xpj
+and if G contains a sentential form % Ap $
+which means we have found j of the characters needed to complete the `p`th production
+and $ is a string that can follow the entire production
+
+to parse an LR(k) grammar we will be in a set P of states
+for each of these states we'll have a rule to decide what translation step to take and what new state to enter
+
+to keep information during parsing we mantain a stack
+    P0 X1P1 X2P2 ... XnPn | Y1 ... Yk &
+on the left hand side of the bar we have state sets and characters which represent the substring that has already been translated
+and the state sets Pi we were just after considering Xb ... Xi
+on the right of the bar we have k terminal characters Y1 ... Yk which can be used to make the translation decision
+and at the end a string & which has not yet been examined
+
+at the beginning the stack looks like [0, 0; ~^k] | ° ~^k
+at any given time we can assume the stack is proper and we are in the state set P = Pn
+step 1) we need to compute the closure P' of P defined as the smallest set satisfying
+    P' = P <union>
+    q is a production and we are at the beginning of it's parsing
+    and there is a p production in P' for which we started parsing at the `j`th item
+        { [q, 0; %] | exists [p, j; $] in P'
+    we aren't at the end of the `p`th production parsing
+        , 0 <eq j < np
+    the next item of the `p`th production equals the lhs of the `q`th production
+        , Xp(j+1) = Aq
+    the lookahead % is a T k-string
+    derivable from the remaining items of the `p`th production and it's lookahead
+        , and % in Hk(Xp(j+2) .. Xp(np) $) }
+
+step 2) then we build a set of k-letter strings
+    Z =
+    set of all the T k-strings of lookahead in the middle of parsing a production without _ at the start
+        { % | exists [p, j; $] in P'
+        , 0 <eq j < np
+        , % in H'k( Xp(j+1) ... Xp(np) $ ) }
+
+    set of all lookahead at the end of parsing a production
+        Zp = { $ | [p, np; $] in P' }, 0 <eq p <eq < s
+
+Z is all the strings Y1 .. Yk where the handle doesn't exist
+Zp is all the strings where the `p`th production should be used
+Z, Z0, ..., Zs must be disjoint sets or the grammar isn't LR(k)
+
+if Y1 .. Yk is in Z shift the stack left and go to step 3
+if Y1 ... Yk is in Zp
+let r = n - np, the stack contains the righthand side of production p
+replace the stack with
+    P0 X1P1 ... XrPr Ap | Y1 ... Yk &
+    let n = r, X(n+1) = Ap
+
+step 3) with the stack as
+    P0 X1P1 ... XnPn X(n+1) | Y1 ... Yk &
+compute P'n as with step 1 and then calculate P(n+1) with the equation
+the `p`th production at the (j+1) item
+where the X(n+1) item in the stack equal the (j+1) item of the `p`th production
+    P(n+1) = { [p, j+1; $] | [p, j; $] in P'n and X(n+1) = Xp(j+1) }
+
+we add P(n+1) on the left of the bar and go to step 1 with P = P(n+1) and with n increased by one
+if P equals [0, 1; ~^k] and Y1 ... Yk = ~^k the parsing is complete
+
+it's often possible to take the union of several state sets for which the parsing action does not conflict
