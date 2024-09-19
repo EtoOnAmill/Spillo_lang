@@ -1,12 +1,15 @@
 -module(lex).
 -export([lex/1, lex_one/2]).
+-export_type([token/0, ttype/0, pos/0]). 
 
-%% tokentype ::= ignore | eof | word | string | number
+-type ttype() :: ignore|eof|word|string|number|reserved.
+-type pos() :: {integer(), integer()}.
+-type token() :: {ttype(), pos(), string()}.
 
-
-%% string -> list tokens
+-spec lex(string()) -> list(token()).
 lex(Str) -> lex(Str,{1,1}).
-%% string -> list tokens
+
+-spec lex(string(),pos()) -> list(token()).
 lex([],Pos) -> [{eof,Pos} |[]];
 lex(Str, Pos) ->
     case  lex_one(Str, Pos) of
@@ -14,7 +17,7 @@ lex(Str, Pos) ->
         {Ttype, Token, NewPos, Rest} -> [{Ttype, Pos, Token}|lex(Rest, NewPos)]
     end.
 
-%% string * pos -> {ttype, pos, string, {newpos, string}}
+-spec lex_one(string(), pos()) -> {ttype(), pos(), string(), Rest :: {pos(), string()}}.
 lex_one([], Pos) -> {eof,Pos};
 lex_one([Chr|Tail], {Line,Column}) ->
     WhiteSpace=[$\s,$\t,$\n,$\v,$\r],
@@ -41,7 +44,7 @@ lex_one([Chr|Tail], {Line,Column}) ->
                     _ -> throw("Unclosed delimiter, expected '`'")
                 end,
                 {NewLine, NewColumn} = NewPosition(Token),
-                {string, Token, {NewLine, NewColumn + 1}, Rem};
+                {string, Token, {NewLine, NewColumn + 2}, Rem};
             $# ->
                 IsntOctothorp = fun($#) -> false; (_) -> true end,
                 {Token, Rem, Delimited} = case take_while(IsntOctothorp, Tail) of
@@ -72,7 +75,8 @@ lex_one([Chr|Tail], {Line,Column}) ->
             end)
         end.
 
-%% (a -> bool) -> list a -> {list a, list a}
+
+-spec take_while(fun((A) -> boolean()), list(A)) -> {Taken::list(A),Rest::list(A)}.
 take_while(Fn, List) ->
     Helper = fun
         Hlp([], Acc) -> {lists:reverse(Acc),[]};
@@ -83,7 +87,7 @@ take_while(Fn, List) ->
     Helper(List, []).
 
 
-%% string -> {string, string}
+-spec take_number(string()) -> {string(),string()}.
 take_number(Str) -> 
     Is_decimal = fun(N) when N >= $0, N =< $9 -> true; (_) -> false end,
     take_while( Is_decimal , Str).

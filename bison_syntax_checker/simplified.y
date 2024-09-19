@@ -34,13 +34,14 @@ patt:
     | patt patt '/' ;
 
 fnBranch:
-    patt andguard orguard ';' sort
-    | patt andguard orguard ';' sort '?'
-    | patt andguard orguard ';' sort '\\' fnBranch
-    | patt andguard orguard ';' sort '?' '\\' fnBranch;
+    patt guard ';' sort
+    | patt guard ';' sort '?'
+    | patt guard ';' sort '\\' fnBranch
+    | patt guard ';' sort '?' '\\' fnBranch;
 
+guard: andguard orguard;
 orguard:
-    | '|' patt andguard orguard;
+    | '|' patt guard;
 andguard:
     | '&' patt ":=" sort andguard;
 
