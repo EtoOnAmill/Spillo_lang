@@ -1,13 +1,11 @@
 -module(parse).
--export([parse/1, safe_nth/2]).
+-export([parse/1, state_parser/3, input_stream/3]).
 -export_type([grammar/0,ast/0]). 
 
 -type ast() :: {ProdId::atom(), Items::list()}.
 -type grammar() :: #{ root := atom(), productions := #{ atom() => list(list(atom())) } }.
 
--spec parse(list(lex:token())) -> ast().
-parse(Tokens) -> 
-    Grammar = #{
+-define(GRAMMAR, #{
         root => sort,
         productions => #{
             sort => [
@@ -38,7 +36,7 @@ parse(Tokens) ->
             guard => [ andguard,orguard ],
             orguard => [ [], ['|',patt,guard] ],
             andguard => [ [], ['&',patt,':=',sort,andguard] ],
-            litterals => [  [num], [num,'.',num] , [word] , [str] ],
+            litterals => [ [num], [num,'.',num] , [word] , [str] ],
 
             binop => [ [typebinop], [sortbinop] ],
             typebinop => [ ['^'], ['%'] ],
@@ -52,6 +50,16 @@ parse(Tokens) ->
         %% productions : [ {intermediate, [[terminals/nonterminals],...]} ]
         %% intermediates are all atoms on the lhs in the productions
         %% terminals are all atom that show up only on the rhs of the productions
+    }). 
+
+-spec parse(list(lex:token())) -> ast().
+parse(Tokens) -> 
+    Grammar = #{
+        root => s,
+        productions => #{
+            s => [ [d], [word] ],
+            d => [ [s,word] ]
+        }
     },
     parse(Tokens, Grammar).
 
@@ -59,94 +67,118 @@ parse(Tokens) ->
 
 
 -spec parse(list(lex:token()), grammar()) -> ast().
-parse(Tokens, #{root := Root, productions := Productions}=Grammar) -> 
+parse(Tokens, #{root := Root, productions := Productions}) -> 
     SLOC = [],
-    SROC = token_to_terminal(Tokens),
-    StateStack = [ {root, 0, 0} | [] ],
-    ExtendedProd = Productions#{root => [ [Root] ]},
-    InputStream = spawn(parse, input_stream, [#{}, SLOC, SROC]),
-    StateParserPID = spawn(parse, state_parser, [StateStack, ExtendedProd, InputStream]).
+    SROC = lists:map(fun(T) -> token_to_terminal(T) end, Tokens),
+    StateStack = [ {root, 0, 1} | [] ],
+    ExtendedProd = Productions#{root => [ [Root, eof] ]},
+    ParserPID=spawn(parse, state_parser, [StateStack, ExtendedProd, self()]),
+    input_stream(#{ParserPID => pending}, SLOC, SROC).
 
 % input thread, holds all referenced state stacks and the SLOC with SROC
 % can recive a remove to remove a state stack
 % can recive a ready to know when a state stack is done doing it's calculations
-% can recive a reduced to spawn a new input thread with the item on top of it's SROC and the appropriate Ss in it's pool
-% sends the next input when all the Ss are ready
-input_stream(StateParsers, SLOC, [{ Item, _ }|Tl]=SROC) -> 
-    case maps:fold(fun(_,State,Acc) -> (State==ready) and Acc end, true, StateParsers) of
-        false -> handle_responses(StateParsers, SLOC, SROC);
-        true -> 
-            maps:map((fun(Key,_) -> Key ! {inputItem, Item}, pending end), StateParsers),
-            NewSLOC = [Item|SLOC],
-            handle_responses(StateParsers, NewSLOC, Tl)
+% can recive a new for a new Ss to add to the pool
+% can recive a reduced with an item
+    % remove the id of the Ss from the pool
+    % spawn a new input thread with the item on top of it's SROC 
+    % and the id of the Ss in the pool
+
+% parsing thread, holds the state stack and SLOC
+% complete and sends a ready
+% recive an input to push on the SLOC
+    % sends a remove if the input recived doesn't match the production next item
+        % terminates the thread
+    % sends a reduce when it reaches the end of the production
+        % remove Progress items from the Ss 
+        % get the new Is id
+
+input_stream(StateParsers, SLOC, []) -> 
+    maps:foreach(fun(Key,_) -> Key ! { eof, SLOC, self() } end , StateParsers); 
+input_stream(StateParsers, SLOC, [{ Item, _ }=Hd|Tl]=SROC) -> 
+    case maps:size(StateParsers) == 0 of 
+        false ->  
+            case maps:fold(fun(_,State,Acc) -> (State==ready) and Acc end, true, StateParsers) of
+                false -> handle_responses(StateParsers, SLOC, SROC);
+                true -> 
+                    NewParserStates = maps:map((fun(Key,_) -> Key ! {inputItem, Item}, pending end), StateParsers),
+                    NewSLOC = [Hd|SLOC],
+                    handle_responses(NewParserStates, NewSLOC, Tl)
+            end;
+        true -> []
     end.
 
 handle_responses(StateParsers, SLOC, SROC) -> 
     receive
         { remove, PID } -> input_stream(maps:remove(PID, StateParsers), SLOC, SROC);
-        { reduce, PID, N, Prod } ->
-            ReducedSLOC = lists:nthtail(N, SLOC),
-            Item = {Prod, take(N, SLOC)},
-            NewInputId = spawn(parse, input_stream, [#{PID => pending}, ReducedSLOC, [Item|SROC]]),
-            PID ! { newInputStream, NewInputId },
+        { reduce, PID, Progress, Prod } ->
+            io:fwrite("~p reduces ~p as ~p~n", [PID,Progress,Prod]), 
+            ReducedSLOC = lists:nthtail(Progress, SLOC),
+            Item = {Prod, take(Progress, SLOC)},
+            NewSROC = [Item|SROC],
+            InputPID = spawn(parse, input_stream, [#{PID => pending}, ReducedSLOC, NewSROC]),
+            PID ! { inputId, InputPID },
             input_stream(maps:remove(PID, StateParsers), SLOC, SROC);
-        { ready, PID } -> input_stream(StateParsers#{PID => ready}, SLOC, SROC)
+        { ready, PID } -> 
+            input_stream(StateParsers#{PID => ready}, SLOC, SROC);
+        { new, PID } -> input_stream(StateParsers#{PID => pending}, SLOC, SROC)
     end.
-% parsing thread, holds the state stack and SLOC
-% can recive an input to push on the SLOC
-% sends a remove if the input recived doesn't match the production next item
-% sends a ready when it's completed it's computation
-% sends a reduce when it reaches the end of the production
-    % recieves the ID of the new input thread
-state_parser([{Prod, Progress, ProdId}|_] = StateStack, Productions, InputID) -> 
-    ExpectedItem = complete(StateStack, Productions, InputID),
-    InputID ! {ready, self()},
+
+
+state_parser_setup(StateStack, Productions) ->
+    receive 
+        { inputId, InputPID } -> state_parser(StateStack, Productions, InputPID);
+        { eof, SLOC, InputPID } -> io:fwrite("~pIs:~p ~p~nSs:~p ~p~n",[self(),InputPID,SLOC,InputPID,StateStack]);
+        MSG -> io:fwrite("~nInvalid message ( ~p ) to parser_setup~n~n", [MSG]) 
+    end.
+
+state_parser([{Prod, Progress, ProdId}|_] = StateStack, Productions, InputPID) -> 
+    ExpectedItem = complete(StateStack, Productions, InputPID),
+    InputPID ! {ready, self()},
     receive
-        {inputItem, InputItem } -> 
-            case ExpectedItem == InputItem of
-                true ->  check_reduce(
-                    [{Prod,Progress+1,ProdId}|StateStack],
-                    Productions,
-                    InputID);
-                _ ->  InputID ! {remove, self()}
-            end;
-        eof -> eof
-        % todo after logic
+        { inputItem, InputItem } when ExpectedItem == InputItem -> 
+            NewState = {Prod, Progress+1, ProdId},
+            io:fwrite("~pshifting~p ~p~n", [self(),InputPID,NewState]), 
+            NewStateStack = [NewState|StateStack],
+            check_reduce(NewStateStack, Productions, InputPID);
+        { inputItem, _ } -> InputPID ! {remove, self()};
+        { eof, SLOC } -> io:fwrite("~pIs:~p ~p~nSs:~p ~p~n",[self(),InputPID,SLOC,InputPID,StateStack]);
+        MSG -> io:fwrite("~nInvalid message ( ~p ) to parser~n~n", [MSG]) 
     end.
 
-check_reduce([{Prod,Progress,ProdId}|_]=StateStack, Productions, InputID) -> 
+check_reduce([{Prod,Progress,ProdId}|_]=StateStack, Productions, InputPID) ->
     ProdRhs = maps:get(Prod, Productions),
-    ItemList = safe_nth(ProdId, ProdRhs),
-    case safe_nth(Progress, ItemList) of
-        [] -> 
-            ReducedStateStack = lists:nthtail(Progress, StateStack),
-            InputID ! { reduce, self(), Progress, Prod },
-            receive { newInputStream, NewInputId } -> 
-                state_parser(
-                    ReducedStateStack,
-                    Productions,
-                    NewInputId) 
-            end;
-        _ -> state_parser(StateStack, Productions, InputID)
+    ItemList = lists:nth(ProdId, ProdRhs),
+    case length(ItemList) == Progress of
+        true -> 
+            io:fwrite("~pReducing~p (~p)~p~n", [self(),InputPID,Progress,StateStack]), 
+            ReducedStateStack = lists:nthtail(Progress+1, StateStack),
+            InputPID ! { reduce, self(), Progress, Prod },
+            state_parser_setup(ReducedStateStack, Productions);
+        _ -> state_parser(StateStack, Productions, InputPID)
     end.
 
-complete([{Prod, Progress, ProdId}|_]=StateStack, Productions, InputID) ->
+complete([{Prod, Progress, ProdId}|_]=StateStack, Productions, InputPID) ->
     ProdRhs = maps:get(Prod, Productions),
-    ExpectedItem = lists:nth(Progress, ProdRhs),
+    ExactProd = lists:nth(ProdId, ProdRhs), 
+    ExpectedItem = safe_nth(Progress, ExactProd),
     case maps:is_key(ExpectedItem, Productions) of
         true -> 
-            Enumerated = lists:enumerate(ProdRhs),
-            TopZeroStates = lists:takewhile(fun({_,0,_}) -> true; (_) -> false end, StateStack),
+            EItemProds = maps:get(ExpectedItem, Productions),
+            Enumerated = lists:enumerate(EItemProds),
             Fun = fun({N, _}) -> 
-                NewState = {Prod,0,N},
+                NewState = {ExpectedItem,0,N},
+                TopZeroStates = lists:takewhile(fun({_,0,_}) -> true; (_) -> false end, StateStack),
                 case lists:member(NewState, TopZeroStates) of 
-                    false ->
+                    false -> io:fwrite("~pcomplete~p ~p ~p~n", [self(),InputPID,NewState,StateStack]),
                         NewStateStack = [NewState|StateStack],
-                        spawn(parse, state_parser, [NewStateStack, Productions, InputID]) 
+                        NewPID=spawn(parse, state_parser, [NewStateStack, Productions, InputPID]),
+                        InputPID ! { new, NewPID };
+                    true -> [] 
                 end
             end,
             lists:foreach(Fun, Enumerated);
-        _ -> []
+        false -> []%io:fwrite("~p isn't an intermediate~n", [ExpectedItem]) 
     end,
     ExpectedItem.
 
