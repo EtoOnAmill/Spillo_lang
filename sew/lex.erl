@@ -21,7 +21,7 @@ lex(Str, Pos) ->
 lex_one([], Pos) -> {eof,Pos};
 lex_one([Chr|Tail], {Line,Column}) ->
     WhiteSpace=[$\s,$\t,$\n,$\v,$\r],
-    Reserved=[$^,$!,$%,$/,$|,$&,$:,${,$},$[,$],$(,$),$=,$>,$;,$~,$`,$.,$,,$#|WhiteSpace],
+    Reserved=[$^,$!,$%,$/,$|,$&,$:,${,$},$[,$],$(,$),$=,$>,$<,$;,$~,$`,$.,$,,$#|WhiteSpace],
     NewPosition = fun(Token) -> 
         LineSplit=string:split(Token, "\n", all),
         NewLine= Line + length(LineSplit) - 1, %% length returns 1 in case of no split 
