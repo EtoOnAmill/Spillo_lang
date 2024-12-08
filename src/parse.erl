@@ -1,5 +1,5 @@
 -module(parse).
--export([parse/1, state_parser/3, input_stream/3]).
+-export([parse/1, state_parser/3, state_parser_setup/2, input_stream/3]).
 -export_type([grammar/0,ast/0]). 
 
 -type ast() :: {ProdId::atom(), Items::list()}.
@@ -55,12 +55,58 @@
 -spec parse(list(lex:token())) -> ast().
 parse(Tokens) -> 
     Grammar = #{
-        root => s,
+        root => sort,
         productions => #{
-            s => [ [d], [word] ],
-            d => [ [s,word] ]
-        }
+            sort => [
+                [litterals]
+                , [sort,sort,binop]
+                , [sort,'::',pattunit,sort,typebinop]
+                , [sort,'=:',pattunit,sort,'/']
+                , ['[',sort,']']
+                , ['>',fnBranch,'<']
+            ],
+
+            patt => [
+                [litterals]
+                , ['[',patt,']']
+                , ['~',sortunit]
+                , [patt,':',sortunit]
+                , [patt,'=',pattunit]
+                , [patt,patt,'/']
+            ],
+
+            fnBranch => [
+                [patt,guard,';',sort]
+                , [patt,guard,';',sort,'?']
+                , [patt,guard,';',sort,'\\',fnBranch]
+                , [patt,guard,';',sort,'?','\\',fnBranch]
+            ],
+
+            guard => [ andguard,orguard ],
+            orguard => [ [], ['|',patt,guard] ],
+            andguard => [ [], ['&',patt,':=',sort,andguard] ],
+            litterals => [ [num], [num,'.',num] , [word] , [str] ],
+
+            binop => [ [typebinop], [sortbinop] ],
+            typebinop => [ ['^'], ['%'] ],
+            sortbinop => [ ['!'], ['/'] ],
+
+            pattunit => [ [litterals], ['(',patt,')'] ],
+            sortunit => [ [litterals], ['(',sort,')'] ]
+        }% productions
+        %% root : intermediate
+        %% lookahead : nat
+        %% productions : [ {intermediate, [[terminals/nonterminals],...]} ]
+        %% intermediates are all atoms on the lhs in the productions
+        %% terminals are all atom that show up only on the rhs of the productions
     },
+%#{
+%        root => s,
+%        productions => #{
+%            s => [ [d], [word] ],
+%            d => [ [s,word] ]
+%        }
+%    },
     parse(Tokens, Grammar).
 
 %-type state() :: {atom(), Progress::integer(), ProdId::integer()}.
@@ -72,7 +118,8 @@ parse(Tokens, #{root := Root, productions := Productions}) ->
     SROC = lists:map(fun(T) -> token_to_terminal(T) end, Tokens),
     StateStack = [ {root, 0, 1} | [] ],
     ExtendedProd = Productions#{root => [ [Root, eof] ]},
-    ParserPID=spawn(parse, state_parser, [StateStack, ExtendedProd, self()]),
+    ParserPID=spawn(parse, state_parser_setup, [StateStack, ExtendedProd]),
+    ParserPID ! { inputId, self() },
     input_stream(#{ParserPID => pending}, SLOC, SROC).
 
 % input thread, holds all referenced state stacks and the SLOC with SROC
@@ -154,8 +201,11 @@ check_reduce([{Prod,Progress,ProdId}|_]=StateStack, Productions, InputPID) ->
             io:fwrite("~pReducing~p (~p)~p~n", [self(),InputPID,Progress,StateStack]), 
             ReducedStateStack = lists:nthtail(Progress+1, StateStack),
             InputPID ! { reduce, self(), Progress, Prod },
+            % do completion for reduce here
             state_parser_setup(ReducedStateStack, Productions);
-        _ -> state_parser(StateStack, Productions, InputPID)
+        false -> 
+            % do completion for shift here
+            state_parser(StateStack, Productions, InputPID)
     end.
 
 complete([{Prod, Progress, ProdId}|_]=StateStack, Productions, InputPID) ->
