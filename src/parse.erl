@@ -1,64 +1,16 @@
 -module(parse).
--export([parse/1, state_parser/3, state_parser_setup/2, input_stream/3]).
--export_type([grammar/0,ast/0]). 
+-export([parse_spillo/1, state_parser/3, state_parser_setup/2, input_stream/3]).
+-export_type([ast/0]). 
 
--type ast() :: {ProdId::atom(), Items::list()}.
--type grammar() :: #{ root := atom(), productions := #{ atom() => list(list(atom())) } }.
+-type ast() :: {Intermediate::atom(), Items::list()}.
 
--define(GRAMMAR, #{
-        root => sort,
-        productions => #{
-            sort => [
-                [litterals]
-                , ['[',sort,']']
-                , ['>',fnBranch,'<']
-                , [sort,sort,binop]
-                , [sort,'::',pattunit,sort,typebinop]
-                , [sort,'=:',pattunit,sort,'/']
-            ],
-
-            patt => [
-                [litterals]
-                , ['[',patt,']']
-                , ['~',sortunit]
-                , [patt,':',sortunit]
-                , [patt,'=',pattunit]
-                , [patt,patt,'/']
-            ],
-
-            fnBranch => [
-                [patt,guard,';',sort]
-                , [patt,guard,';',sort,'?']
-                , [patt,guard,';',sort,'\\',fnBranch]
-                , [patt,guard,';',sort,'?','\\',fnBranch]
-            ],
-
-            guard => [ andguard,orguard ],
-            orguard => [ [], ['|',patt,guard] ],
-            andguard => [ [], ['&',patt,':=',sort,andguard] ],
-            litterals => [ [num], [num,'.',num] , [word] , [str] ],
-
-            binop => [ [typebinop], [sortbinop] ],
-            typebinop => [ ['^'], ['%'] ],
-            sortbinop => [ ['!'], ['/'] ],
-
-            pattunit => [ [litterals], ['(',patt,')'] ],
-            sortunit => [ [litterals], ['(',sort,')'] ]
-        }% productions
-        %% root : intermediate
-        %% lookahead : nat
-        %% productions : [ {intermediate, [[terminals/nonterminals],...]} ]
-        %% intermediates are all atoms on the lhs in the productions
-        %% terminals are all atom that show up only on the rhs of the productions
-    }). 
-
--spec parse(list(lex:token())) -> ast().
-parse(Tokens) -> 
+-spec parse_spillo(list(lex:token())) -> ast().
+parse_spillo(Tokens) -> 
     Grammar = #{
         root => sort,
         productions => #{
-            sort => [
-                [litterals]
+            sort => 
+                [ [litterals]
                 , [sort,sort,binop]
                 , [sort,'::',pattunit,sort,typebinop]
                 , [sort,'=:',pattunit,sort,'/']
@@ -66,8 +18,8 @@ parse(Tokens) ->
                 , ['>',fnBranch,'<']
             ],
 
-            patt => [
-                [litterals]
+            patt => 
+                [ [litterals]
                 , ['[',patt,']']
                 , ['~',sortunit]
                 , [patt,':',sortunit]
@@ -75,8 +27,8 @@ parse(Tokens) ->
                 , [patt,patt,'/']
             ],
 
-            fnBranch => [
-                [patt,guard,';',sort]
+            fnBranch =>
+                [ [patt,guard,';',sort]
                 , [patt,guard,';',sort,'?']
                 , [patt,guard,';',sort,'\\',fnBranch]
                 , [patt,guard,';',sort,'?','\\',fnBranch]
@@ -109,18 +61,56 @@ parse(Tokens) ->
 %    },
     parse(Tokens, Grammar).
 
-%-type state() :: {atom(), Progress::integer(), ProdId::integer()}.
 
 
--spec parse(list(lex:token()), grammar()) -> ast().
+
+-type state_stack() :: list(list(grammar:state())).
+-type input_stack() :: {LOC::list(ast()), ROC::list(ast())}.
+
+-spec parse_action(InputData::input_stack(), State::state_stack(), Grammar::grammar:grammar()) -> {input_stack(), state_stack()}.
+parse_action(InputData, State, Grammar) -> 
+    { }.
+
+-spec get_action(Lookahead::ast(), BareState::grammar:bare_state(), Grammar::grammar:grammar()) -> reduce | shift | reject | accept.
+get_action(Lookahead, BareState, Grammar) -> 
+    StateProd = grammar:production(BareState, Grammar),
+    ExpectedItems = grammar:expected_items(BareState, Grammar),
+    Progress = grammar:progress(BareState),
+    {Intermediate, _} = Lookahead,
+    case { length(StateProd), lists:member(Intermediate, ExpectedItems) } of
+        {N, true} when N == Progress -> reduce;
+        {_, true} -> shift;
+        {_, false} when Intermediate == root -> accept;
+        {_, false} -> reject
+    end.
+
+% start with [ [{root, 0, x, [~]}] ]
+% for every state on top of SS for which the lookahead is a intermediate 
+    % add {i,0,x,[lookahead]} to top of SS or expand the existing state with the parent state lookahead
+% if on top of stack tere is only one state terminating
+    % if lookahead matches then reduce
+    % else do a temporary shift
+% if on top of stack tere is one state terminating
+    % if lookahead matches then reduce
+    % else shift
+% else shift
+
+% shift
+    % for evry state on top of SS where expected_item == input_item
+    % add to SS {intermediate, progress+1, prod_id, [lookahead]}
+
+% reduce
+    % remove progress elements off SS
+    % if top element is temporary state remove that too
+    % add intermediate to top of IS
+
+
+-spec parse(list(lex:token()), grammar:grammar()) -> ast().
 parse(Tokens, #{root := Root, productions := Productions}) -> 
-    SLOC = [],
-    SROC = lists:map(fun(T) -> token_to_terminal(T) end, Tokens),
-    StateStack = [ {root, 0, 1} | [] ],
-    ExtendedProd = Productions#{root => [ [Root, eof] ]},
-    ParserPID=spawn(parse, state_parser_setup, [StateStack, ExtendedProd]),
-    ParserPID ! { inputId, self() },
-    input_stream(#{ParserPID => pending}, SLOC, SROC).
+    InputStack = lists:map(fun(T) -> token_to_ast(T) end, Tokens),
+    StateStack = [ {root, 0, 1, [eof]} | [] ],
+    ExtendedProd = Productions#{root => [ [Root, eof] ]}.
+    % todo connect to parsing fucntion
 
 % input thread, holds all referenced state stacks and the SLOC with SROC
 % can recive a remove to remove a state stack
@@ -236,15 +226,16 @@ safe_nth(0, [Hd|_]) -> Hd;
 safe_nth(_, []) -> [];
 safe_nth(N, [_|Tl]) -> safe_nth(N - 1, Tl).
 
-take(N, List) ->
+take(N, List) when N >= 0 ->
     Take = fun
         TT(0, _, Acc) -> lists:reverse(Acc);
         TT(NN, [Hd|Tl], Acc) -> TT(NN-1, Tl, [Hd|Acc]);
-        TT(_, _, Acc) -> lists:reverse(Acc)
+        TT(_, [], Acc) -> lists:reverse(Acc)
     end,
-    Take(N, List, []).
+    Take(N, List, []);
+take(_, _) -> [].
  
--spec token_to_terminal(lex:token()) -> ast().
-token_to_terminal({reserved, Pos, Value}) -> {reserved, [Pos, list_to_atom(Value)]};
-token_to_terminal({eof, Pos}) -> {eof, [Pos]};
-token_to_terminal({Type, Pos, Value}) -> {Type, [Pos, Value]}.
+-spec token_to_ast(lex:token()) -> ast().
+token_to_ast({reserved, Pos, Value}) -> {reserved, [Pos, list_to_atom(Value)]};
+token_to_ast({eof, Pos}) -> {eof, [Pos]};
+token_to_ast({Type, Pos, Value}) -> {Type, [Pos, Value]}.
