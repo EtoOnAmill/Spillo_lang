@@ -21,7 +21,11 @@ lex(Str, Pos) ->
 lex_one([], Pos) -> {eof,Pos};
 lex_one([Chr|Tail], {Line,Column}) ->
     WhiteSpace=[$\s,$\t,$\n,$\v,$\r],
-    Reserved=[$^,$!,$%,$/,$|,$&,$:,${,$},$[,$],$(,$),$=,$>,$<,$;,$~,$`,$.,$,,$#|WhiteSpace],
+    BinOps=[$^,$!,$%,$/],
+    Delimiters=[${,$},$[,$],$(,$),$>,$<,$`,$#],
+    Functions=[$?,$&,$|,$;,$\\],
+    Other=[$=,$:,$~],
+    Reserved=WhiteSpace ++ BinOps ++ Delimiters ++ Functions ++ Other,
     NewPosition = fun(Token) -> 
         LineSplit=string:split(Token, "\n", all),
         NewLine= Line + length(LineSplit) - 1, %% length returns 1 in case of no split 
@@ -33,9 +37,8 @@ lex_one([Chr|Tail], {Line,Column}) ->
         true -> {ignore, whiteSpace, NewPosition([Chr]), Tail};
         false ->
         (case Chr of
-            N when N >= $0, N =< $9 %% the comma is the boolean and
-            -> {Token, Rem} = take_number([Chr|Tail]),
-                %
+            N when N >= $0, N =< $9 -> %% the comma is the boolean and
+                {Token, Rem} = take_number([Chr|Tail]),
                 {number, Token, NewPosition(Token), Rem};
             $` ->
                 IsntBackTick = fun($`) -> false; (_) -> true end,
@@ -58,13 +61,8 @@ lex_one([Chr|Tail], {Line,Column}) ->
             C  -> case lists:member(C, Reserved) of
                 true -> case [Chr|Tail] of
                     [$:,$:|TTail] -> {reserved, "::", NewPosition(".."), TTail};
-                    [$>,$>|TTail] -> {reserved, ">>", NewPosition(".."), TTail};
                     [$=,$:|TTail] -> {reserved, "=:", NewPosition(".."), TTail};
                     [$:,$=|TTail] -> {reserved, ":=", NewPosition(".."), TTail};
-                    [$^,$]|TTail] -> {reserved, "^]", NewPosition(".."), TTail};
-                    [$%,$]|TTail] -> {reserved, "%]", NewPosition(".."), TTail};
-                    [$/,$]|TTail] -> {reserved, "/]", NewPosition(".."), TTail};
-                    [$!,$]|TTail] -> {reserved, "!]", NewPosition(".."), TTail};
                     _ -> {reserved, [Chr], NewPosition("."), Tail}
                     end;
                 false ->
