@@ -1,23 +1,17 @@
-EC=erlc
-EFLAGS=-o $(BUILD)
-SRC=src
-BUILD=build
-BEAM=build/lex.beam build/parse.beam build/sew.beam
+DC=gdc
+SRCD=./src
+DFLAGS=-c -Wall -Wpedantic -Werror -I $(SRCD)
+OBJD=./build
+OBJ=$(OBJD)/spillocore.o
 
-all: $(BEAM)
-#	$(EC) $(EFLAGS) $(SRC)/*.erl
+all : $(OBJ)
+	$(DC) -o unin $(OBJ)
 
-build/lex.beam: src/lex.erl
-	$(EC) $(EFLAGS) src/lex.erl
-
-build/parse.beam: src/parse.erl
-	$(EC) $(EFLAGS) src/parse.erl
-
-build/sew.beam: src/sew.erl
-	$(EC) $(EFLAGS) src/sew.erl
+release : 
+    $(DC) -o unin $(RELEASE) $(SRC_ALL)
 
 
 
 .PHONY : clean
 clean :
-	rm $(BUILD)/*.beam
+	rm unin $(OBJ)
