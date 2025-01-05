@@ -1,4 +1,3 @@
-
 %{
     // prologue
 %}
@@ -10,8 +9,6 @@
 %token STR
 // declarations
     // lower precedence
-%precedence '|'
-%precedence '&'
     // higher precedence
 
 // rules
@@ -19,17 +16,16 @@
 // these are all expressions, called sorts because they can be at any level universe
 sort:
     litterals
-    | '[' sort ']'
     | '>' fnBranch '<'
     | sort sort binop
     | sort "::" pattunit sort typebinop
     | sort "=:" pattunit sort '/' ;
 
 patt:
+    typeless_patt ':' sortunit
+typeless_patt:
     litterals
-    | '[' patt ']'
     | '~' sortunit // static sort pattern matching
-    | patt ':' sortunit
     | patt '=' pattunit
     | patt patt '/' ;
 
