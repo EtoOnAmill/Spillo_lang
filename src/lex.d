@@ -10,8 +10,6 @@ const char[] functions = ['?', '&', '|', ';', '\\'];
 const char[] other = ['=', ':', '~'];
 const char[] reserved = whitespace ~ binOps ~ delimeters ~ functions ~ other;
 
-const char[] numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-
 const enum TokenType {
     EOF,
     IGNORE,
@@ -104,7 +102,7 @@ Token lex_one(string input) {
 
     switch(char first = input[0]){
         case '0': .. case '9':
-            bool is_number(char c) { return numbers.canFind(c); }
+            bool is_number(char c) { return '0' <= c && c <= '9'; }
             ret.tt = TokenType.NUMBER;
             ret.val = take_while(&is_number, input).idup;
             break;
