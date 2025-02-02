@@ -10,13 +10,13 @@ const char[] functions = ['?', '&', '|', ';', '\\'];
 const char[] other = ['=', ':', '~'];
 const char[] reserved = whitespace ~ binOps ~ delimeters ~ functions ~ other;
 
-const enum TokenType {
-    EOF,
-    IGNORE,
+extern(C) enum TokenType {
+    EOF = 0,
     WORD,
     STRING,
     NUMBER,
     RESERVED,
+    IGNORE,
 }
 
 struct Position {
@@ -32,7 +32,7 @@ struct Position {
 struct Token {
     TokenType tt;
     Position pos;
-    string val;
+    string value;
 
     this(Position pos) {
         this.pos = pos;
@@ -45,13 +45,13 @@ struct Token {
 
     size_t offset() {
         if(tt == TokenType.STRING) {
-            return val.length + 2;
+            return value.length + 2;
         }
-        return val.length;
+        return value.length;
     }
 
     Position new_position() {
-        string[] lines = splitter(val,"\n").array;
+        string[] lines = splitter(value,"\n").array;
         lines.length ? (lines=lines) : (lines=[""]);
         string lastLine = lines[$-1];
         size_t newLine = pos.line + lines.length - 1; // -1 in case of no split
@@ -104,55 +104,88 @@ Token lex_one(string input) {
         case '0': .. case '9':
             bool is_number(char c) { return '0' <= c && c <= '9'; }
             ret.tt = TokenType.NUMBER;
-            ret.val = take_while(&is_number, input).idup;
+            ret.value = take_while(&is_number, input).idup;
             break;
 
         case '`':
             bool isnt_backtick(char c) { return c != '`'; }
             ret.tt = TokenType.STRING;
-            ret.val = take_while(&isnt_backtick, input[1..$]).idup; // we skip the first character that is a backtic
+            ret.value = take_while(&isnt_backtick, input[1..$]).idup; // we skip the first character that is a backtic
             break;
 
         case '#':
             bool isnt_octothorp(char c) { return c != '#'; }
             ret.tt = TokenType.IGNORE;
-            ret.val = ("#" ~ take_while(&isnt_octothorp, input[1..$]) ~ "#" ).idup;
+            ret.value = ("#" ~ take_while(&isnt_octothorp, input[1..$]) ~ "#" ).idup;
             break;
 
         default:
             if( whitespace.canFind(first) ){
                 ret.tt = TokenType.IGNORE;
-                ret.val = [first];
+                ret.value = [first];
                 break;
             }
 
-
             if( reserved.canFind(first) ){
                 ret.tt = TokenType.RESERVED;
-
-                string symbol = ( input.length > 1 ? [first, input[1]] : [first] ).idup;
-
-                switch( symbol ){
-                    case "::":
-                    case "=:":
-                    case ":=":
-                        ret.val = symbol;
-                        break;
-                    default:
-                        ret.val = [first];
-                        break;
-                }
+                ret.value = [first];
                 break;
             }
 
             bool isnt_reserved(char c) { return ! reserved.canFind(c); }
             ret.tt = TokenType.WORD;
-            ret.val = take_while!(char)(&isnt_reserved, input).idup;
+            ret.value = take_while!(char)(&isnt_reserved, input).idup;
 
             break;
         }
     return ret;
 }
+
+
+
+/* bison */
+
+Token[] yylex_tokens;
+size_t yylex_idx = 0;
+
+void yylex_init(string input) {
+    yylex_tokens = lex_spillo(input);
+    yylex_idx = 0;
+}
+
+extern(C) int yylex() {
+    Token current_token = yylex_tokens[yylex_idx];
+    int ret;
+
+    final switch (current_token.tt) {
+        case TokenType.WORD:
+            ret = TokenType.WORD;
+            break;
+        case TokenType.STRING:
+            ret = TokenType.STRING;
+            break;
+        case TokenType.NUMBER:
+            ret = TokenType.NUMBER;
+            break;
+        case TokenType.RESERVED:
+            ret = current_token.value[0];
+            break;
+        case TokenType.IGNORE:
+            yylex_idx += 1;
+            ret = yylex();
+            break;
+        case TokenType.EOF:
+            ret = 0;
+            break;
+    }
+
+    return ret;
+}
+
+
+
+
+
 
 T[] take_while(T)(bool delegate(T) f, immutable(T)[] arr) {
     size_t idx;

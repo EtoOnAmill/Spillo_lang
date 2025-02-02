@@ -18,8 +18,8 @@ sort:
     litterals
     | '>' fnBranch '<'
     | sort sort binop
-    | sort "::" pattunit sort typebinop
-    | sort "=:" pattunit sort '/' ;
+    | sort ':' ':' pattunit sort typebinop
+    | sort '=' ':' pattunit sort '/' ;
 
 patt:
     typeless_patt ':' sortunit
@@ -39,7 +39,7 @@ guard: andguard orguard;
 orguard:
     | '|' patt guard;
 andguard:
-    | '&' patt ":=" sort andguard;
+    | '&' patt ':' '=' sort andguard;
 
 litterals: 
     NUM
