@@ -1,26 +1,27 @@
-DC=gdc
-
-DFLAGS=-c -Wall -Wpedantic -Werror -I $(SRCD)
-RELEASE=-O3
 
 SRCD=./src
 OBJD=./build
 OBJ=$(OBJD)/spillocore.o $(OBJD)/lex.o
 
+DC=dmd
+
+DFLAGS=-w -c -I=$(SRCD)
+
+
 all : $(OBJ)
-	$(DC) -o $(OBJD)/cuci1 $(OBJ)
+	$(DC) -of=$(OBJD)/cuci1 $(OBJ)
 
 $(OBJD)/lex.o : $(SRCD)/lex.d
-	$(DC) $(DFLAGS) $(SRCD)/lex.d -o $(OBJD)/lex.o
+	$(DC) $(DFLAGS) $(SRCD)/lex.d -of=$(OBJD)/lex.o
 
 $(OBJD)/spillocore.o : $(SRCD)/spillocore.d
-	$(DC) $(DFLAGS) $(SRCD)/spillocore.d -o $(OBJD)/spillocore.o
+	$(DC) $(DFLAGS) $(SRCD)/spillocore.d -of=$(OBJD)/spillocore.o
 
 
 release :
-	$(DC) -o $(OBJD)/cuci1 $(RELEASE) $(SRC_ALL)
+	$(DC)
 
 
 .PHONY : clean
 clean :
-	rm cuci1 $(OBJ)
+	rm $(OBJD)/cuci1 $(OBJ)
