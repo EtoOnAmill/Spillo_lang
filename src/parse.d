@@ -2,8 +2,6 @@ import std.stdio;
 import std.array;
 import std.algorithm;
 import std.format;
-import core.thread.osthread;
-import core.time;
 class Grammar(GrammarItem = int) {
     GrammarItem[] intermediates;
     GrammarItem[][] productions;
@@ -14,9 +12,17 @@ class Grammar(GrammarItem = int) {
         this.eof = eof;
     }
 
-    Grammar add_production(GrammarItem interm, GrammarItem[] items) {
+    Grammar add_production(GrammarItem interm, GrammarItem[] production) {
         this.intermediates ~= interm;
-        this.productions ~= items;
+        this.productions ~= production;
+
+        return this;
+    }
+
+    Grammar add_many_production(GrammarItem interm, GrammarItem[][] list_of_productions) {
+        foreach(production; list_of_productions) {
+            this.add_production(interm, production);
+        }
 
         return this;
     }
@@ -38,13 +44,13 @@ class Grammar(GrammarItem = int) {
 
     GrammarItem find_root() {
         GrammarItem ret;
-        while(is_intermediate(ret)) {ret++;}
+        while(this.is_intermediate(ret)) {ret++;}
         return ret;
     }
 
     size_t[] productions_for_intermediate(GrammarItem intermediate) {
         size_t[] ret;
-        if(!is_intermediate(intermediate)) return ret;
+        if(!this.is_intermediate(intermediate)) return ret;
 
         for(size_t idx = 0; idx < this.intermediates.length; idx++) {
             if(this.intermediates[idx] == intermediate) {
@@ -57,14 +63,14 @@ class Grammar(GrammarItem = int) {
 
     GrammarItem[] new_lookahead(StateLine state_line) {
         GrammarItem[] extended_new_lookahead = this.productions[state_line.production_idx][state_line.progress..$] ~ state_line.lookahead;
-        return refine_lookahead(extended_new_lookahead);
+        return this.refine_lookahead(extended_new_lookahead);
     }
 
     GrammarItem[] refine_lookahead(GrammarItem[] lookahead) {
         size_t idx = 1;
 
         // there should always be a terminal symbol before the end of the array
-        while(is_intermediate(lookahead[idx])) { idx++; }
+        while(this.is_intermediate(lookahead[idx])) { idx++; }
 
         return lookahead[1..(idx+1)];
     }
@@ -87,7 +93,7 @@ class Grammar(GrammarItem = int) {
         size_t production_idx;
         GrammarItem[] lookahead;
     };
-    alias state = StateLine[];
+    alias State = StateLine[];
     void print_state_line(StateLine line){
         string output = "\t";
         output ~= format("%s", this.intermediates[line.production_idx]);
@@ -101,7 +107,7 @@ class Grammar(GrammarItem = int) {
         GrammarItem root_prime = this.find_root();
 // 0) Create the extended grammar like with canonical LR with root symbol S, and it's own symbol S' not in Intermediates nor Terminals set
 // 1) Let state `0` start with Production State `S' -> . S (~)`, where the dot represents the Progress in the production, '~' represents the Eof symbol, all comma separated lists of symbols in the parenthesis are the lookahead
-        state[] generated_states = [
+        State[] generated_states = [
             [StateLine(0, this.productions.length, [ this.eof ] )]
         ];
         this.add_production(this.eof, [this.root]);
@@ -113,7 +119,7 @@ class Grammar(GrammarItem = int) {
         for(size_t curr_state_idx = 0; curr_state_idx < generated_states.length; curr_state_idx++) {
             writeln(curr_state_idx);
             table ~= null;
-            ref state curr_state = generated_states[curr_state_idx];
+            ref State curr_state = generated_states[curr_state_idx];
 
             struct StateLineMetadata{ Action action; GrammarItem expected_item; };
             StateLineMetadata[] metadatas;
@@ -131,8 +137,8 @@ class Grammar(GrammarItem = int) {
 
 
 // 2) If the item on the right of Progress is an intermediate, add all production(without creating duplicates) of that intermediate, with lookahead equal to all items right of Progress+1 and the production lookahead up to the first Terminal item; repeat for all Production States added
-                foreach(size_t prod_idx; productions_for_intermediate(expected_item)) {
-                    StateLine new_state_line = StateLine(0, prod_idx, new_lookahead(curr_line));
+                foreach(size_t prod_idx; this.productions_for_intermediate(expected_item)) {
+                    StateLine new_state_line = StateLine(0, prod_idx, this.new_lookahead(curr_line));
                     if(!curr_state.canFind(new_state_line))
                         curr_state ~= new_state_line;
                 }
@@ -253,14 +259,6 @@ Example grammar
         return table;
     }
 
-
-
-    bool is_subset(StateLine[] container, StateLine[] inside) {
-        foreach(ins; inside) {
-            if(!any!(e => e.progress == ins.progress && e.production_idx == ins.production_idx && e.lookahead == ins.lookahead )(container)) return false;
-        }
-        return true;
-    }
 };
 
 
