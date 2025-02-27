@@ -1,4 +1,5 @@
 import std.stdio;
+import std.array;
 import std.algorithm;
 import std.format;
 import core.thread.osthread;
@@ -54,11 +55,16 @@ class Grammar(GrammarItem = int) {
         return ret;
     }
 
+    GrammarItem[] new_lookahead(StateLine state_line) {
+        GrammarItem[] extended_new_lookahead = this.productions[state_line.production_idx][state_line.progress..$] ~ state_line.lookahead;
+        return refine_lookahead(extended_new_lookahead);
+    }
+
     GrammarItem[] refine_lookahead(GrammarItem[] lookahead) {
-        size_t idx;
+        size_t idx = 1;
 
         // there should always be a terminal symbol before the end of the array
-        for(idx = 0;is_intermediate(lookahead[idx]); idx++) { }
+        while(is_intermediate(lookahead[idx])) { idx++; }
 
         return lookahead[1..(idx+1)];
     }
@@ -108,14 +114,15 @@ class Grammar(GrammarItem = int) {
             writeln(curr_state_idx);
             table ~= null;
             ref state curr_state = generated_states[curr_state_idx];
-        //foreach(state curr_state; generated_states) {
+
+            struct StateLineMetadata{ Action action; GrammarItem expected_item; };
+            StateLineMetadata[] metadatas;
 
 // -) For every state line:
             for(size_t curr_line_idx = 0; curr_line_idx < curr_state.length; curr_line_idx++) {
                 StateLine curr_line = curr_state[curr_line_idx];
                 this.print_state_line(curr_line);
-                Thread.sleep(dur!"seconds"(1));
-            //foreach(StateLine curr_line; curr_state) {
+
                 GrammarItem[] prod = this.productions[curr_line.production_idx];
 
                 GrammarItem expected_item;
@@ -123,37 +130,69 @@ class Grammar(GrammarItem = int) {
                 else { expected_item = curr_line.lookahead[0]; }
 
 
-                GrammarItem[] extended_new_lookahead = prod[curr_line.progress..$] ~ curr_line.lookahead;
-                GrammarItem[] new_lookahead = refine_lookahead(extended_new_lookahead);
 // 2) If the item on the right of Progress is an intermediate, add all production(without creating duplicates) of that intermediate, with lookahead equal to all items right of Progress+1 and the production lookahead up to the first Terminal item; repeat for all Production States added
                 foreach(size_t prod_idx; productions_for_intermediate(expected_item)) {
-                    StateLine new_state_line = StateLine(0, prod_idx, new_lookahead);
+                    StateLine new_state_line = StateLine(0, prod_idx, new_lookahead(curr_line));
                     if(!curr_state.canFind(new_state_line))
                         curr_state ~= new_state_line;
                 }
 
-                if(curr_line.progress < prod.length) {
 // 4) If Progress+1 falls within the Production, if there isn't an action for the grammr item at Production[Progress+1] then create it with Shift(Tot_states+1); then add the Production with it's Progress increased by one to the state indicated by the action related to it's item
-                    StateLine new_state_line = StateLine(curr_line.progress+1, curr_line.production_idx, curr_line.lookahead);
-                    if(expected_item in table[curr_state_idx]) {
-                        ref ParsingAction existing_action = table[curr_state_idx][expected_item];
-                        if(existing_action.action == Action.SHIFT) {
-                            generated_states[existing_action.parameter] ~= new_state_line;
-                        } else if(!existing_action.action == Action.SHIFT){
-                            existing_action.action = Action.REFUTE;
-                        }
-                    } else {
-                        table[curr_state_idx][expected_item] = ParsingAction(Action.SHIFT, generated_states.length);
-                        generated_states ~= [new_state_line];
-                    }
-                } else {
 // 3) If Progress+1 is greater than the numbers of items in the production, create a reduction rule of Reduce(Progress, Intermediate) on GrammarItem Lookahead[0]; if a reduce rule shares the grammar item with any other rule there is a conflict
-                    if(expected_item in table[curr_state_idx]) {
-                        table[curr_state_idx][expected_item] = ParsingAction(Action.REFUTE, 0);
-                    } else {
-                        table[curr_state_idx][expected_item] = ParsingAction(Action.REDUCE, curr_line.production_idx);
-                    }
+                StateLineMetadata current;
+                current.expected_item = expected_item;
+                if(curr_line.progress < prod.length){
+                    current.action = Action.SHIFT;
+                } else {
+                    current.action = Action.REDUCE;
+                }
+                metadatas ~= current;
 // 5) Once every production has an action in the state, go to Curr_state+1, repeat from step 2
+            }
+
+            for(size_t idx=0; idx < curr_state.length; idx++) {
+                StateLineMetadata metadata = metadatas[idx];
+                StateLine curr_line = curr_state[idx];
+
+                if(!(metadata.expected_item in table[curr_state_idx])) {
+                    if(metadata.action == Action.REDUCE) {
+
+                        table[curr_state_idx][metadata.expected_item] = ParsingAction(Action.REDUCE, curr_line.production_idx);
+
+                    } else {
+
+                        StateLine[] new_same_expected_item = [
+                            StateLine(
+                                curr_line.progress+1,
+                                curr_line.production_idx,
+                                curr_line.lookahead)];
+                        for(size_t state_line_idx=0; state_line_idx < metadatas.length; state_line_idx++) {
+                            if(
+                            idx != state_line_idx
+                            && metadatas[state_line_idx].expected_item == metadata.expected_item
+                            && metadatas[state_line_idx].action == Action.SHIFT) {
+                                StateLine same_expected_item_line = curr_state[state_line_idx];
+                                new_same_expected_item ~=
+                                    StateLine(
+                                        same_expected_item_line.progress+1,
+                                        same_expected_item_line.production_idx,
+                                        same_expected_item_line.lookahead);
+                            }
+                        }
+
+
+                        size_t state_to_shift_to = 0;
+                        while(
+                        state_to_shift_to < generated_states.length
+                        && !generated_states[state_to_shift_to].startsWith(new_same_expected_item)) {
+                            state_to_shift_to++;
+                        }
+
+                        table[curr_state_idx][metadata.expected_item] = ParsingAction(Action.SHIFT, state_to_shift_to);
+                        if(state_to_shift_to == generated_states.length) {
+                            generated_states ~= new_same_expected_item;
+                        }
+                    }
                 }
             }
             writeln("\t", table[curr_state_idx]);
@@ -212,6 +251,15 @@ Example grammar
     6) Stop when Curr_state>Tot_states
 */
         return table;
+    }
+
+
+
+    bool is_subset(StateLine[] container, StateLine[] inside) {
+        foreach(ins; inside) {
+            if(!any!(e => e.progress == ins.progress && e.production_idx == ins.production_idx && e.lookahead == ins.lookahead )(container)) return false;
+        }
+        return true;
     }
 };
 

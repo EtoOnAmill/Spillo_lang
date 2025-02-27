@@ -22,4 +22,16 @@ void main(){
 
     auto tt = gg.generate_parsing_table();
     writeln(tt);
+
+
+    Grammar!char ggg = new Grammar!char('S', '~');
+    ggg.add_production('S', ['E']);
+    ggg.add_production('S', []);
+    ggg.add_production('E', ['T', '+', 'E']);
+    ggg.add_production('E', ['T']);
+    ggg.add_production('T', ['[','E',']']);
+    ggg.add_production('T', ['1']);
+
+    auto ttt = ggg.generate_parsing_table();
+    writeln(ttt);
 }
