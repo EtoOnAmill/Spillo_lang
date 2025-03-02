@@ -2,10 +2,13 @@ import std.stdio;
 import std.array;
 import std.algorithm;
 import std.format;
+
 class Grammar(GrammarItem = int) {
     GrammarItem[] intermediates;
     GrammarItem[][] productions;
 
+    GrammarItem root;
+    GrammarItem eof;
 
     this(GrammarItem root, GrammarItem eof) {
         this.root = root;
@@ -77,9 +80,6 @@ class Grammar(GrammarItem = int) {
 
 
 
-    GrammarItem root;
-    GrammarItem eof;
-
     const enum Action { ACCEPT, SHIFT, REDUCE, REFUTE }
     struct ParsingAction {
         Action action;
@@ -149,6 +149,8 @@ class Grammar(GrammarItem = int) {
                 current.expected_item = expected_item;
                 if(curr_line.progress < prod.length){
                     current.action = Action.SHIFT;
+                } else if(curr_line.production_idx == (this.productions.length-1)) {
+                    current.action = Action.ACCEPT;
                 } else {
                     current.action = Action.REDUCE;
                 }
@@ -161,7 +163,11 @@ class Grammar(GrammarItem = int) {
                 StateLine curr_line = curr_state[idx];
 
                 if(!(metadata.expected_item in table[curr_state_idx])) {
-                    if(metadata.action == Action.REDUCE) {
+                    if(metadata.action == Action.ACCEPT) {
+
+                        table[curr_state_idx][metadata.expected_item] = ParsingAction(Action.ACCEPT, curr_line.production_idx);
+
+                    } else if(metadata.action == Action.REDUCE) {
 
                         table[curr_state_idx][metadata.expected_item] = ParsingAction(Action.REDUCE, curr_line.production_idx);
 
@@ -172,14 +178,15 @@ class Grammar(GrammarItem = int) {
                                 curr_line.progress+1,
                                 curr_line.production_idx,
                                 curr_line.lookahead)];
+
                         for(size_t state_line_idx=0; state_line_idx < metadatas.length; state_line_idx++) {
-                            if(
-                            idx != state_line_idx
-                            && metadatas[state_line_idx].expected_item == metadata.expected_item
-                            && metadatas[state_line_idx].action == Action.SHIFT) {
+                            if( idx != state_line_idx && metadatas[state_line_idx].expected_item == metadata.expected_item ) {
                                 StateLine same_expected_item_line = curr_state[state_line_idx];
-                                new_same_expected_item ~=
-                                    StateLine(
+
+                                if(metadatas[state_line_idx].action != Action.SHIFT)
+                                    writeln("ERROR! Conflict with state_line(", same_expected_item_line, ")");
+                                else
+                                    new_same_expected_item ~= StateLine(
                                         same_expected_item_line.progress+1,
                                         same_expected_item_line.production_idx,
                                         same_expected_item_line.lookahead);
