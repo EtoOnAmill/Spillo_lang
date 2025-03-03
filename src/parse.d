@@ -3,60 +3,65 @@ import std.array;
 import std.algorithm;
 import std.format;
 
-class Grammar(GrammarItem = int) {
-    GrammarItem[] intermediates;
-    GrammarItem[][] productions;
+template GrammarT (GrammarItem = int) {
 
-    GrammarItem root;
-    GrammarItem eof;
+    struct Grammar {
+        GrammarItem[] intermediates;
+        GrammarItem[][] productions;
 
-    this(GrammarItem root, GrammarItem eof) {
-        this.root = root;
-        this.eof = eof;
-    }
+        GrammarItem root;
+        GrammarItem eof;
 
-    Grammar add_production(GrammarItem interm, GrammarItem[] production) {
-        this.intermediates ~= interm;
-        this.productions ~= production;
-
-        return this;
-    }
-
-    Grammar add_many_production(GrammarItem interm, GrammarItem[][] list_of_productions) {
-        foreach(production; list_of_productions) {
-            this.add_production(interm, production);
+        this(GrammarItem root, GrammarItem eof) {
+            this.root = root;
+            this.eof = eof;
         }
 
-        return this;
+        Grammar add_production(GrammarItem interm, GrammarItem[] production) {
+            this.intermediates ~= interm;
+            this.productions ~= production;
+
+            return this;
+        }
+
+        Grammar add_many_production(GrammarItem interm, GrammarItem[][] list_of_productions) {
+            foreach(production; list_of_productions) {
+                this.add_production(interm, production);
+            }
+
+            return this;
+        }
     }
 
-    bool is_intermediate(GrammarItem item) {
-        if(item == this.eof) return false;
-        foreach(GrammarItem intermediate; this.intermediates) {
-            if(intermediate != this.eof && intermediate == item) { return true; }
+
+
+    bool is_intermediate(Grammar g,GrammarItem item) {
+        if(item == g.eof) return false;
+        foreach(GrammarItem intermediate; g.intermediates) {
+            if(intermediate != g.eof && intermediate == item) { return true; }
         }
         return false;
     }
 
-    void print_productions() {
-        for(size_t i = 0; i < this.intermediates.length; i++){
-            writeln(i, ' ', this.intermediates[i], " ::= ", this.productions[i]);
+    void print_productions(Grammar g) {
+        for(size_t i = 0; i < g.intermediates.length; i++){
+            writeln(i, ' ', g.intermediates[i], " ::= ", g.productions[i]);
         }
         writeln();
     }
 
-    GrammarItem find_root() {
+    GrammarItem find_root(Grammar g) {
         GrammarItem ret;
-        while(this.is_intermediate(ret)) {ret++;}
+        while(g.is_intermediate(ret) && ret != GrammarItem.max) {ret++;}
         return ret;
     }
 
-    size_t[] productions_for_intermediate(GrammarItem intermediate) {
+    size_t[] productions_for_intermediate(Grammar g, GrammarItem intermediate) {
         size_t[] ret;
-        if(!this.is_intermediate(intermediate)) return ret;
+        if(!g.is_intermediate(intermediate)) return ret;
 
-        for(size_t idx = 0; idx < this.intermediates.length; idx++) {
-            if(this.intermediates[idx] == intermediate) {
+        for(size_t idx = 0; idx < g.intermediates.length; idx++) {
+            if(g.intermediates[idx] == intermediate) {
                 ret ~= idx;
             }
         }
@@ -64,16 +69,16 @@ class Grammar(GrammarItem = int) {
         return ret;
     }
 
-    GrammarItem[] new_lookahead(StateLine state_line) {
-        GrammarItem[] extended_new_lookahead = this.productions[state_line.production_idx][state_line.progress..$] ~ state_line.lookahead;
-        return this.refine_lookahead(extended_new_lookahead);
+    GrammarItem[] new_lookahead(Grammar g, StateLine state_line) {
+        GrammarItem[] extended_new_lookahead = g.productions[state_line.production_idx][state_line.progress..$] ~ state_line.lookahead;
+        return g.refine_lookahead(extended_new_lookahead);
     }
 
-    GrammarItem[] refine_lookahead(GrammarItem[] lookahead) {
+    GrammarItem[] refine_lookahead(Grammar g,GrammarItem[] lookahead) {
         size_t idx = 1;
 
         // there should always be a terminal symbol before the end of the array
-        while(this.is_intermediate(lookahead[idx])) { idx++; }
+        while(g.is_intermediate(lookahead[idx])) { idx++; }
 
         return lookahead[1..(idx+1)];
     }
@@ -94,24 +99,24 @@ class Grammar(GrammarItem = int) {
         GrammarItem[] lookahead;
     };
     alias State = StateLine[];
-    void print_state_line(StateLine line){
+    void print_state_line(Grammar g, StateLine line){
         string output = "\t";
-        output ~= format("%s", this.intermediates[line.production_idx]);
+        output ~= format("%s", g.intermediates[line.production_idx]);
         output ~= format(" -> ");
-        output ~= format("%s",this.productions[line.production_idx][0..line.progress]);
-        output ~= format(" . %s (%s)", this.productions[line.production_idx][line.progress..$], line.lookahead);
+        output ~= format("%s",g.productions[line.production_idx][0..line.progress]);
+        output ~= format(" . %s (%s)", g.productions[line.production_idx][line.progress..$], line.lookahead);
         writeln(output);
     }
 
-    ParsingTable generate_parsing_table() {
-        GrammarItem root_prime = this.find_root();
+    ParsingTable generate_parsing_table(Grammar g) {
+        GrammarItem root_prime = g.find_root();
 // 0) Create the extended grammar like with canonical LR with root symbol S, and it's own symbol S' not in Intermediates nor Terminals set
 // 1) Let state `0` start with Production State `S' -> . S (~)`, where the dot represents the Progress in the production, '~' represents the Eof symbol, all comma separated lists of symbols in the parenthesis are the lookahead
         State[] generated_states = [
-            [StateLine(0, this.productions.length, [ this.eof ] )]
+            [StateLine(0, g.productions.length, [ g.eof ] )]
         ];
-        this.add_production(this.eof, [this.root]);
-        this.print_productions();
+        g.add_production(g.eof, [g.root]);
+        g.print_productions();
 
         ParsingAction[GrammarItem][] table;
 
@@ -127,9 +132,9 @@ class Grammar(GrammarItem = int) {
 // -) For every state line:
             for(size_t curr_line_idx = 0; curr_line_idx < curr_state.length; curr_line_idx++) {
                 StateLine curr_line = curr_state[curr_line_idx];
-                this.print_state_line(curr_line);
+                g.print_state_line(curr_line);
 
-                GrammarItem[] prod = this.productions[curr_line.production_idx];
+                GrammarItem[] prod = g.productions[curr_line.production_idx];
 
                 GrammarItem expected_item;
                 if(curr_line.progress < prod.length) { expected_item = prod[curr_line.progress]; }
@@ -137,8 +142,8 @@ class Grammar(GrammarItem = int) {
 
 
 // 2) If the item on the right of Progress is an intermediate, add all production(without creating duplicates) of that intermediate, with lookahead equal to all items right of Progress+1 and the production lookahead up to the first Terminal item; repeat for all Production States added
-                foreach(size_t prod_idx; this.productions_for_intermediate(expected_item)) {
-                    StateLine new_state_line = StateLine(0, prod_idx, this.new_lookahead(curr_line));
+                foreach(size_t prod_idx; g.productions_for_intermediate(expected_item)) {
+                    StateLine new_state_line = StateLine(0, prod_idx, g.new_lookahead(curr_line));
                     if(!curr_state.canFind(new_state_line))
                         curr_state ~= new_state_line;
                 }
@@ -149,7 +154,7 @@ class Grammar(GrammarItem = int) {
                 current.expected_item = expected_item;
                 if(curr_line.progress < prod.length){
                     current.action = Action.SHIFT;
-                } else if(curr_line.production_idx == (this.productions.length-1)) {
+                } else if(curr_line.production_idx == (g.productions.length-1)) {
                     current.action = Action.ACCEPT;
                 } else {
                     current.action = Action.REDUCE;
@@ -266,6 +271,10 @@ Example grammar
         return table;
     }
 
+    bool parse(Grammar g, GrammarItem[] input) {
+
+        return true;
+    }
 };
 
 
