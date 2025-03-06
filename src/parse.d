@@ -2,6 +2,7 @@ import std.stdio;
 import std.array;
 import std.algorithm;
 import std.format;
+import std.range.primitives;
 
 template GrammarT (GrammarItem = int) {
 
@@ -271,9 +272,75 @@ Example grammar
         return table;
     }
 
-    bool parse(Grammar g, GrammarItem[] input) {
+    ParsingAction get_action(ParsingTable table, size_t state, GrammarItem lookahead) {
+        ParsingAction[GrammarItem] state_of_table = table[state];
 
-        return true;
+        if(lookahead in state_of_table) {
+            return state_of_table[lookahead];
+        } else {
+            return ParsingAction(Action.REFUTE, 0);
+        }
+    }
+
+
+    struct GrammarNode {
+        size_t production_idx;
+        GrammarItem value;
+        GrammarNode[] items;
+    }
+
+    GrammarNode[] parse(Grammar g, GrammarItem[] input) {
+        ParsingTable table = g.generate_parsing_table();
+        GrammarItem[] to_parse = input ~ [g.eof];
+        GrammarNode[] processed;
+        GrammarNode[] right_of_cursor;
+        size_t[] state_stack = [0];
+
+loop:
+        while(true) {
+            bool r_o_c = right_of_cursor.length > 0;
+            GrammarItem next_item =
+                r_o_c
+                ? right_of_cursor.front.value
+                : cast(GrammarItem) to_parse.front; // cast necessary since .front returns dchar for GrammarItem=char
+            ParsingAction p_action = get_action(table, state_stack.back, next_item);
+
+            GrammarNode next_item_processed =
+                r_o_c
+                ? right_of_cursor.front
+                : GrammarNode(g.intermediates.length, next_item, []);
+
+            writeln(map!(e => e.value)(processed), '.', map!(e => e.value)(right_of_cursor), to_parse, '\t', p_action, '\n', state_stack);
+
+            final switch(p_action.action) {
+                case Action.SHIFT:
+                    GrammarItem shift_item = next_item;
+                    processed ~= next_item_processed;
+                    state_stack ~= p_action.parameter;
+                    if(r_o_c) right_of_cursor.popFront;
+                    else to_parse.popFront;
+                    break;
+
+                case Action.REDUCE:
+                    size_t progress = g.productions[p_action.parameter].length;
+                    GrammarItem intermediate = g.intermediates[p_action.parameter];
+                    size_t p_length = processed.length-progress;
+                    GrammarNode[] items = processed[p_length..$];
+                    processed.popBackN(progress);
+                    state_stack.popBackN(progress);
+                    //to_parse = intermediate ~ to_parse;
+                    right_of_cursor = GrammarNode(p_action.parameter, intermediate, items) ~ right_of_cursor;
+                    break;
+
+                case Action.ACCEPT:
+                    break loop;
+
+                case Action.REFUTE:
+                    break loop;
+            }
+        }
+
+        return processed;
     }
 };
 
