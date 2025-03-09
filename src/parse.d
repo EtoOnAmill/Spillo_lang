@@ -282,16 +282,26 @@ Example grammar
         }
     }
 
-    interface ast_utils(AstNode) {
-        void init_grammar(Grammar);
-        AstNode from_grammar_item(GrammarItem);
-        AstNode reduce(size_t, AstNode[]);
-        GrammarItem to_grammar_item(AstNode);
+    struct token_utils(Token) {
+        GrammarItem function(Token val) to_grammar_item;
+        Token function(GrammarItem val) from_grammar_item;
+    }
+
+    struct ast_utils(AstNode, Token) {
+        AstNode function(Token item) from_token;
+        Token function(AstNode node) to_token;
+        GrammarItem function(AstNode node) to_grammar_item;
+        AstNode function(Grammar grammar, size_t prod_idx, AstNode[] items) reduce;
     };
-    AstNode[] parse(AstNode)(Grammar g, GrammarItem[] input, ast_utils!(AstNode) builder) {
-        builder.init_grammar(g);
+
+    AstNode[] parse(AstNode,Token)
+    ( Grammar g
+    , Token[] input
+    , ast_utils!(AstNode,Token) ast_u
+    , token_utils!Token token_u) {
+
         ParsingTable table = g.generate_parsing_table();
-        GrammarItem[] to_parse = input ~ [g.eof];
+        Token[] to_parse = input ~ [token_u.from_grammar_item(g.eof)];
         AstNode[] processed;
         AstNode[] right_of_cursor;
         size_t[] state_stack = [0];
@@ -299,22 +309,24 @@ Example grammar
 loop:
         while(true) {
             bool r_o_c = right_of_cursor.length > 0;
-            GrammarItem next_item =
+
+            Token next_token =
                 r_o_c
-                ? builder.to_grammar_item(cast(AstNode)right_of_cursor.front)
-                : cast(GrammarItem) to_parse.front; // cast necessary since .front returns dchar for GrammarItem=char
-            ParsingAction p_action = get_action(table, state_stack.back, next_item);
+                ? ast_u.to_token(right_of_cursor.front)
+                : cast(Token) to_parse.front;
 
             AstNode next_item_processed =
                 r_o_c
-                ? cast(AstNode)right_of_cursor.front
-                : builder.from_grammar_item(next_item);
+                ? cast(AstNode) right_of_cursor.front
+                : ast_u.from_token(next_token);
 
-            writeln(map!(e => builder.to_grammar_item(cast(AstNode)e))(processed), '.', map!(e => builder.to_grammar_item(cast(AstNode)e))(right_of_cursor), to_parse, '\t', p_action, '\n', state_stack);
+            GrammarItem next_item = token_u.to_grammar_item(next_token);
+            ParsingAction p_action = get_action(table, state_stack.back, next_item);
+
+            writeln(map!(e => ast_u.to_grammar_item(cast(AstNode)e))(processed), '.', map!(e => ast_u.to_grammar_item(cast(AstNode)e))(right_of_cursor), to_parse, '\t', p_action, '\n', state_stack);
 
             final switch(p_action.action) {
                 case Action.SHIFT:
-                    GrammarItem shift_item = next_item;
                     processed ~= next_item_processed;
                     state_stack ~= p_action.parameter;
                     if(r_o_c) right_of_cursor.popFront;
@@ -328,8 +340,7 @@ loop:
                     AstNode[] items = processed[p_length..$];
                     processed.popBackN(progress);
                     state_stack.popBackN(progress);
-                    //to_parse = intermediate ~ to_parse;
-                    right_of_cursor = builder.reduce(p_action.parameter, items) ~ right_of_cursor;
+                    right_of_cursor = ast_u.reduce(g, p_action.parameter, items) ~ right_of_cursor;
                     break;
 
                 case Action.ACCEPT:
