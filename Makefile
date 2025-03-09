@@ -1,7 +1,7 @@
 
 SRCD=./src
 OBJD=./build
-OBJ=$(OBJD)/spillocore.o $(OBJD)/lex.o $(OBJD)/parse.o
+OBJ=$(OBJD)/spillocore.o $(OBJD)/lex.o $(OBJD)/parse.o $(OBJD)/parse_spillocore.o
 
 DC=dmd
 
@@ -20,6 +20,8 @@ $(OBJD)/lex.o : $(SRCD)/lex.d
 $(OBJD)/parse.o : $(SRCD)/parse.d
 	$(DC) $(DFLAGS) $(SRCD)/parse.d -of=$(OBJD)/parse.o
 
+$(OBJD)/parse_spillocore.o : $(SRCD)/parse_spillocore.d
+	$(DC) $(DFLAGS) $(SRCD)/parse_spillocore.d -of=$(OBJD)/parse_spillocore.o
 
 release :
 	$(DC)

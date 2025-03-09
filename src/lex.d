@@ -4,13 +4,13 @@ import std.stdio;
 import std.array;
 
 const char[] whitespace = [' ', '\t', '\n', '\v', '\r'];
-const char[] binOps = ['^', '!', '%', '/'];
+const char[] binOps = ['^', '!', '%', '/', '?'];
 const char[] delimeters = ['{', '}', '[', ']', '(', ')', '>', '<', '`', '#'];
-const char[] functions = ['?', '&', '|', ';', '\\'];
+const char[] functions = ['&', '|', ';', '\\'];
 const char[] other = ['=', ':', '~'];
 const char[] reserved = whitespace ~ binOps ~ delimeters ~ functions ~ other;
 
-extern(C) enum TokenType {
+enum TokenType {
     EOF = 0,
     WORD,
     STRING,
@@ -140,52 +140,6 @@ Token lex_one(string input) {
         }
     return ret;
 }
-
-
-
-/* bison */
-
-Token[] yylex_tokens;
-size_t yylex_idx = 0;
-
-void yylex_init(string input) {
-    yylex_tokens = lex_spillo(input);
-    yylex_idx = 0;
-}
-
-extern(C) int yylex() {
-    Token current_token = yylex_tokens[yylex_idx];
-    int ret;
-
-    final switch (current_token.tt) {
-        case TokenType.WORD:
-            ret = TokenType.WORD;
-            break;
-        case TokenType.STRING:
-            ret = TokenType.STRING;
-            break;
-        case TokenType.NUMBER:
-            ret = TokenType.NUMBER;
-            break;
-        case TokenType.RESERVED:
-            ret = current_token.value[0];
-            break;
-        case TokenType.IGNORE:
-            yylex_idx += 1;
-            ret = yylex();
-            break;
-        case TokenType.EOF:
-            ret = 0;
-            break;
-    }
-
-    return ret;
-}
-
-
-
-
-
 
 T[] take_while(T)(bool delegate(T) f, immutable(T)[] arr) {
     size_t idx;

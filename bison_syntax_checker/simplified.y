@@ -31,9 +31,7 @@ typeless_patt:
 
 fnBranch:
     patt guard ';' sort
-    | patt guard ';' sort '?'
-    | patt guard ';' sort '\\' fnBranch
-    | patt guard ';' sort '?' '\\' fnBranch;
+    | patt guard ';' sort '\\' fnBranch;
 
 guard: andguard orguard;
 orguard:
@@ -49,7 +47,7 @@ litterals:
 
 binop: typebinop | sortbinop;
 typebinop: '^' | '%';
-sortbinop: '!' | '/';
+sortbinop: '!' | '/' | '?';
 
 pattunit: litterals | '(' patt ')';
 sortunit: litterals | '(' sort ')';

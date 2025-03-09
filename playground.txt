@@ -82,3 +82,51 @@ rec primes : nat iter! nat iter! ^ = > hd tl /;
 
 let primes_fr : nat iter! = nats@tail@tail primes!
 
+
+
+______________________________
+C implementation of lambdas
+______________________________
+
+
+#include <stdio.h>
+#include <stdlib.h>
+
+struct lambda {
+  void *data;
+  void *(*fn)(void*, void*);
+};
+void apply(void** ret, struct lambda lambda, void* arg) {
+  *ret = lambda.fn(lambda.data, arg);
+}
+
+int* fn0(int* data, int* arg) {
+  int* ret = malloc(sizeof(int));
+  *ret = *data - *arg;
+  return ret;
+}
+struct lambda* fn1(void* data, int* arg) {
+  struct lambda* ret = malloc(sizeof(struct lambda));
+  ret->data = arg;
+  ret->fn = fn0;
+  return ret;
+}
+
+
+int main() {
+  // let fn = > x; > y; x y + <<
+  
+  int* retref;
+  int arg0 = 12;
+  int arg1 = 5;
+  
+  struct lambda fn1lam = { .data = NULL, .fn = fn1 };
+  struct lambda *fn0lam;
+  
+  apply(&fn0lam, fn1lam, &arg1);
+  apply(&retref, *fn0lam, &arg0);
+  
+  printf("%d\n", *retref);
+  
+  return 0;
+}
