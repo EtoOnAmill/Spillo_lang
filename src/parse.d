@@ -25,7 +25,7 @@ template GrammarT (GrammarItem = int) {
             return this;
         }
 
-        Grammar add_many_production(GrammarItem interm, GrammarItem[][] list_of_productions) {
+        Grammar add_many_productions(GrammarItem interm, GrammarItem[][] list_of_productions) {
             foreach(production; list_of_productions) {
                 this.add_production(interm, production);
             }
@@ -36,7 +36,7 @@ template GrammarT (GrammarItem = int) {
 
 
 
-    bool is_intermediate(Grammar g,GrammarItem item) {
+    bool is_intermediate(Grammar g, GrammarItem item) {
         if(item == g.eof) return false;
         foreach(GrammarItem intermediate; g.intermediates) {
             if(intermediate != g.eof && intermediate == item) { return true; }
