@@ -6,8 +6,18 @@ import std.array;
 import parse;
 import lex;
 
+
+mixin template open(alias ENUM) {
+    static foreach(alias element;EnumMembers!ENUM) {
+        mixin(ENUM.stringof, ' ', element.stringof, '=', ENUM.stringof, '.', element.stringof, ';');
+    }
+}
 /*
-intermediate : prod_name = item item item ; prod_name = item item item ; .
+intermediate : prod_name = item item item ; prod_name = item item item .
+
+white space before and after : = ; and .
+every production must have a prod_name
+the prod_name can be the same as intermediate
 */
 mixin template Boilerplateinator(alias elements) {
     mixin(make(elements));
@@ -52,7 +62,7 @@ loop:
 
     string generate_grammar =
         "parse.GrammarT!GrammarItems.Grammar spillocore =
-            { GrammarT!GrammarItems.Grammar g = GrammarT!GrammarItems.Grammar(GrammarItems.S, GrammarItems.EOF);";
+            { GrammarT!GrammarItems.Grammar g = GrammarT!GrammarItems.Grammar(GrammarItems.Sort, GrammarItems.EOF);";
     for(size_t idx = 0; idx < prod_items.length; idx++) {
         auto i = intermediates[idx];
         auto p = prod_items[idx];
@@ -67,132 +77,73 @@ loop:
     generate_grammar ~= "return g; }();";
 
 
-    string grammar_items_enum = "enum GrammarItems { EOF, ";
+    string grammar_items_enum = "enum GrammarItems { EOF, Invalid, ";
     foreach(item; items) {
         grammar_items_enum ~= item ~ ",";
     }
     grammar_items_enum ~= "}";
 
+
+    string AstType = "enum AstType {";
+    foreach(prod_name; prod_names) {
+        AstType ~= prod_name ~ ",";
+    }
+    AstType ~= "}";
+
     return
-        grammar_items_enum ~ generate_grammar;
+        grammar_items_enum ~ AstType ~ generate_grammar;
 }
 
 mixin Boilerplateinator!"
-S :
-    S_a = a ;
-    S_D = D .
-D :
-    D_D = S a .";
+Sort :
+    SortLitteral = Litteral ;
+    SortLambda = With Fnbranch Done ;
 
-mixin template open(alias ENUM) {
-    static foreach(alias element;EnumMembers!ENUM) {
-        mixin(ENUM.stringof, ' ', element.stringof, '=', ENUM.stringof, '.', element.stringof, ';');
-    }
-}
-/*
-enum GrammarItems {
-// Terminals
-    Invalid,
-    EOF,
-    Comment, // '#'
-    Apply, // '!'
-    Recurse, // '?'
-    Function, // '^'
-    Pair, // '/'
-    Tuple, // '%'
-    Lp, // '('
-    Rp, // ')'
-    Of, // ':'
-    Equals, // '='
-    With, // '>'
-    Do, // ';'
-    When, // '\\'
-    Done, // '<'
-    And, // '&'
-    Or, // '|'
-    Alt, // '~'
-    Dot, // '.'
-    NUM, // \d+
-    WORD, // [^Terminal].+?\s
-    STR, // `.*?`
-// Intermediates
-    Sort,
-    Patt,
-    Typelesspatt,
-    Fnbranch,
-    Guard,
-    Orguard,
-    Andguard,
-    Litteral,
-    Binop,
-    Typebinop,
-    Sortbinop,
-    Pattunit,
-    Sortunit,
-};
+    SortPair = Sort Sort Pair ;
+    SortTuple = Sort Sort Tuple ;
+    SortFunction = Sort Sort Function ;
+    SortApply = Sort Sort Apply ;
+    SortRecurse = Sort Sort Recurse ;
 
-GrammarT!GrammarItems.Grammar spillocore =
-{
-    mixin open!(GrammarItems);
-    auto g = GrammarT!GrammarItems.Grammar(GrammarItems.Sort, GrammarItems.EOF);
+    SortDepTuple = Sort Of Of Pattunit Sort Tuple ;
+    SortDepFunction = Sort Of Of Pattunit Sort Function ;
 
-    g.add_many_productions(GrammarItems.Sort, [
-        [Litteral], // SortLitteral
-        [With, Fnbranch, Done], // SortLambda
-        [Sort, Sort, Pair], // SortPair
-        [Sort, Sort, Apply], // SortApply
-        [Sort, Sort, Recurse], // SortRecurse
-        [Sort, Of, Of, Pattunit, Sort, Tuple], // SortDepTuple
-        [Sort, Of, Of, Pattunit, Sort, Function], // SortDepFunction
-        [Sort, Equals, Of, Pattunit, Sort, Pair] // SortDepPair
-        ]);
-    g.add_many_productions(GrammarItems.Patt, [
-        [Typelesspatt, Of, Sortunit] // Patt
-        ]);
-    g.add_many_productions(GrammarItems.Typelesspatt, [
-        [Litteral], // PattLitteral
-        [Alt, Sortunit], // PattAlt ; static sort pattern matching
-        [Patt, Equals, Pattunit], // PattEquality
-        [Patt, Patt, Pair] // PattPair
-        ]);
-    g.add_many_productions(GrammarItems.Fnbranch, [
-        [Guard, Do, Sort], // FnBranchLast
-        [Guard, Do, Sort, When, Fnbranch] // FnBranch
-        ]);
-    g.add_many_productions(GrammarItems.Guard, [
-        [Patt, Andguard, Orguard] // Guard
-        ]);
-    g.add_many_productions(GrammarItems.Andguard, [
-        [And, Patt, Of, Equals, Sort, Andguard], // AndGuard
-        [] // AndGuardEmpty
-        ]);
-    g.add_many_productions(GrammarItems.Orguard, [
-        [Or, Guard], // OrGuard
-        [] // OrGuardEmpty
-        ]);
-    g.add_many_productions(GrammarItems.Typebinop, [
-        [Function], // TypeBinOpFunction
-        [Pair] // TypeBinOpPair
-        ]);
-    g.add_many_productions(GrammarItems.Litteral, [
-        [NUM], // LitteralNum
-        [NUM, Dot, NUM], // LitteralDecimalNum
-        [WORD], // LitteralWord
-        [STR] // LitteralString
-        ]);
-    g.add_many_productions(GrammarItems.Pattunit, [
-        [Litteral], // PattUnitLitteral
-        [Lp, Patt, Rp] // PattUnitBounded
-        ]);
-    g.add_many_productions(GrammarItems.Sortunit, [
-        [Litteral], // SortUnitLitteral
-        [Lp, Sort, Rp] // SortUnitBounded
-        ]);
+    SortDepPair = Sort Equal Of Pattunit Sort Pair .
 
-    return g;
-}();
+Patt :
+    Patt = Typelesspatt Of Sortunit .
+Typelesspatt :
+    PattLitteral = Litteral ;
+    PattAlternative = Alt Sortunit ;
+    PattEquality = Patt Equal Pattunit ;
+    PattPair = Patt Patt Pair .
 
-//GrammarT!GrammarItems.ParsingTable spillocore_parsing_table = GrammarT!GrammarItems.generate_parsing_table(spillocore);
+Fnbranch :
+    FnBranchLast = Guard Do Sort Done ;
+    FnBranch = Guard Do Sort When Fnbranch .
+
+Guard :
+    Guard = Patt Andguard Orguard .
+Andguard :
+    AndGuardEmpty = ;
+    AndGuard = And Patt Of Equal Sort Andguard .
+Orguard :
+    OrGuardEmpty = ;
+    OrGuard = Or Guard .
+
+Litteral : 
+    LitteralNumber = NUM ;
+    LitteralDecimal = NUM Dot NUM ;
+    LitteralWord = WORD ;
+    LitteralString = STR .
+
+Pattunit :
+    PattUnitLitteral = Litteral ;
+    PattUnitBounded = Lp Patt Rp .
+Sortunit :
+    SortUnitLitteral = Litteral ;
+    SortUnitBounded = Lp Sort Rp .
+";
 
 GrammarItems token_to_grammar_item(Token t) {
     final switch(t.tt) {
@@ -207,7 +158,6 @@ GrammarItems token_to_grammar_item(Token t) {
 
 GrammarItems string_to_grammar_item(string s) {
     switch(s) {
-        case "#": return GrammarItems.Comment;
         case "!": case "apply":  return GrammarItems.Apply;
         case "?": case "recurse":  return GrammarItems.Recurse;
         case "^": case "function":  return GrammarItems.Function;
@@ -216,7 +166,7 @@ GrammarItems string_to_grammar_item(string s) {
         case "(": case "lp":  return GrammarItems.Lp;
         case ")": case "rp":  return GrammarItems.Rp;
         case ":": case "of":  return GrammarItems.Of;
-        case "=": case "equal":  return GrammarItems.Equals;
+        case "=": case "equal":  return GrammarItems.Equal;
         case ">": case "with":  return GrammarItems.With;
         case ";": case "do":  return GrammarItems.Do;
         case "\\": case "when": return GrammarItems.When;
@@ -229,47 +179,6 @@ GrammarItems string_to_grammar_item(string s) {
     }
 }
 
-enum AstType {
-    SortLitteral,
-    SortLambda,
-    SortPair,
-    SortApply,
-    SortRecurse,
-    SortDepTuple,
-    SortDepFunction,
-    SortDepPair,
-
-    Patt,
-    PattLitteral,
-    PattAlt,
-    PattEquality,
-    PattPair,
-
-    FnBranchLast,
-    FnBranch,
-
-    Guard,
-
-    AndGuard,
-    AndGuardEmpty,
-
-    OrGuard,
-    OrGuardEmpty,
-
-    TypeBinOpFunction,
-    TypeBinOpPair,
-
-    LitteralNum,
-    LitteralDecimalNum,
-    LitteralWord,
-    LitteralString,
-
-    PattUnitLitteral,
-    PattUnitBounded,
-
-    SortUnitLitteral,
-    SortUnitBounded,
-}
 struct AstNode {
     AstType type;
     AstNode[] items;
