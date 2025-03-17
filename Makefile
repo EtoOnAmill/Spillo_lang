@@ -11,7 +11,7 @@ DFLAGS=-w -c -I=$(SRCD)
 all : $(OBJ)
 	$(DC) -of=$(OBJD)/cuci1 $(OBJ)
 
-$(OBJD)/spillocore.o : $(SRCD)/lex.d $(SRCD)/parse.d $(SRCD)/spillocore.d
+$(OBJD)/spillocore.o : $(SRCD)/lex.d $(SRCD)/parse.d $(SRCD)/parse_spillocore.d $(SRCD)/spillocore.d
 	$(DC) $(DFLAGS) $(SRCD)/spillocore.d -of=$(OBJD)/spillocore.o
 
 $(OBJD)/lex.o : $(SRCD)/lex.d
