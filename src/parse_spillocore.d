@@ -18,6 +18,7 @@ intermediate : prod_name = item item item ; prod_name = item item item .
 white space before and after : = ; and .
 every production must have a prod_name
 the prod_name can be the same as intermediate
+cannot start with RESRVED
 */
 mixin template Boilerplateinator(alias elements) {
     mixin(make(elements));
@@ -28,6 +29,7 @@ string make(string elements) {
 
     string curr_intermediate;
     string[] intermediates;
+    string[] terminals;
     string[] prod_names;
     string[] curr_prod_item;
     string[][] prod_items;
@@ -60,35 +62,40 @@ loop:
         }
     }
 
+    terminals = filter!(e => !intermediates.canFind(e))(items).array;
+
     string generate_grammar =
         "parse.GrammarT!GrammarItems.Grammar spillocore =
-            { GrammarT!GrammarItems.Grammar g = GrammarT!GrammarItems.Grammar(GrammarItems.Sort, GrammarItems.EOF);";
+{ GrammarT!GrammarItems.Grammar g = GrammarT!GrammarItems.Grammar(GrammarItems.Sort, GrammarItems.EOF);\n";
     for(size_t idx = 0; idx < prod_items.length; idx++) {
         auto i = intermediates[idx];
         auto p = prod_items[idx];
         string formatted =
             "g.add_production(GrammarItems."
             ~ i
-            ~ ",["
+            ~ ",\n\t[ "
             ~ p.map!(e => "GrammarItems." ~ e).join(",")
-            ~ "]);";
+            ~ " ]);\n";
         generate_grammar ~= formatted;
     }
-    generate_grammar ~= "return g; }();";
+    generate_grammar ~= "\treturn g; }();\n";
 
 
-    string grammar_items_enum = "enum GrammarItems { EOF, Invalid, ";
+    string grammar_items_enum = "enum GrammarItems { EOF, Invalid\n\t, ";
     foreach(item; items) {
-        grammar_items_enum ~= item ~ ",";
+        grammar_items_enum ~= item ~ "\n\t, ";
     }
-    grammar_items_enum ~= "}";
+    grammar_items_enum ~= "}\n";
 
 
-    string AstType = "enum AstType {";
+    string AstType = "enum AstType \n{ ";
     foreach(prod_name; prod_names) {
-        AstType ~= prod_name ~ ",";
+        AstType ~= prod_name ~ "\n\t, ";
     }
-    AstType ~= "}";
+    foreach(terminal; terminals) {
+        AstType ~= "RESERVED" ~ terminal ~ "\n\t, ";
+    }
+    AstType ~= "}\n";
 
     return
         grammar_items_enum ~ AstType ~ generate_grammar;
@@ -184,16 +191,20 @@ struct AstNode {
     AstNode[] items;
 }
 
-/*
-GrammarT!GrammarItem.token_utils!Token token_u = {
-    GrammarItem function(Token val) to_grammar_item;
-    Token function(GrammarItem val) from_grammar_item;
+GrammarT!GrammarItems.token_utils!Token token_u = {
+   to_grammar_item: function GrammarItems(Token token) { return token_to_grammar_item(token); }
 };
 
+/*
 GrammarT!GrammarItem.ast_utils!(AstNode, Token) ast_u = {
-    AstNode function(Token item) from_token;
-    Token function(AstNode node) to_token;
-    GrammarItem function(AstNode node) to_grammar_item;
-    AstNode function(Grammar grammar, size_t prod_idx, AstNode[] items) reduce;
+    from_token : function AstNode(Token item) {} ;
+    to_token : function Token(AstNode node) {} ;
+    to_grammar_item : function GrammarItem(AstNode node) {} ;
+    reduce : function AstNode(GrammarT!GrammarItems.Grammar grammar, size_t prod_idx, AstNode[] items) {
+        GrammarItem intermediate = grammar.intermediates[prod_idx];
+        size_t prod_length = grammar.productions[prod_idx].length;
+        AstNode[] prod_items = items[0..prod_length];
+        return AstNode(AstType(interme
+    } ;
 };
 */

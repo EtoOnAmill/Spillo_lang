@@ -93,7 +93,9 @@ Token[] lex_spillo(string input) {
         idx += lexed.offset();
     }
 
-    return ret;
+    Token eof = Token();
+    eof.tt = TokenType.EOF;
+    return ret ~ eof;
 }
 
 

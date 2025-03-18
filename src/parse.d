@@ -284,7 +284,7 @@ Example grammar
 
     struct token_utils(Token) {
         GrammarItem function(Token val) to_grammar_item;
-        Token function(GrammarItem val) from_grammar_item;
+        @disable this();
     }
 
     struct ast_utils(AstNode, Token) {
@@ -292,6 +292,7 @@ Example grammar
         Token function(AstNode node) to_token;
         GrammarItem function(AstNode node) to_grammar_item;
         AstNode function(Grammar grammar, size_t prod_idx, AstNode[] items) reduce;
+        @disable this();
     };
 
     AstNode[] parse(AstNode,Token)
@@ -301,7 +302,7 @@ Example grammar
     , token_utils!Token token_u) {
 
         ParsingTable table = g.generate_parsing_table();
-        Token[] to_parse = input ~ [token_u.from_grammar_item(g.eof)];
+        Token[] to_parse = input;
         AstNode[] processed;
         AstNode[] right_of_cursor;
         size_t[] state_stack = [0];
