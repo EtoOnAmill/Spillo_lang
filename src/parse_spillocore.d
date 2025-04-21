@@ -92,9 +92,6 @@ loop:
     foreach(prod_name; prod_names) {
         AstType ~= prod_name ~ "\n\t, ";
     }
-    foreach(terminal; terminals) {
-        AstType ~= "RESERVED" ~ terminal ~ "\n\t, ";
-    }
     AstType ~= "}\n";
 
     return
@@ -126,7 +123,7 @@ Typelesspatt :
     PattPair = Patt Patt Pair .
 
 Fnbranch :
-    FnBranchLast = Guard Do Sort Done ;
+    FnBranchLast = Guard Do Sort ;
     FnBranch = Guard Do Sort When Fnbranch .
 
 Guard :
@@ -187,24 +184,20 @@ GrammarItems string_to_grammar_item(string s) {
 }
 
 struct AstNode {
-    AstType type;
+    GrammarItems type;
     AstNode[] items;
 }
 
-GrammarT!GrammarItems.token_utils!Token token_u = {
-   to_grammar_item: function GrammarItems(Token token) { return token_to_grammar_item(token); }
-};
+GrammarT!GrammarItems.ast_utils!(AstNode, Token) ast_u = {
 
-/*
-GrammarT!GrammarItem.ast_utils!(AstNode, Token) ast_u = {
-    from_token : function AstNode(Token item) {} ;
-    to_token : function Token(AstNode node) {} ;
-    to_grammar_item : function GrammarItem(AstNode node) {} ;
+    from_token : function AstNode(Token token) { return AstNode(token_to_grammar_item(token), []); },
+
+    to_grammar_item : function GrammarItems(AstNode node) { return node.type; },
+
     reduce : function AstNode(GrammarT!GrammarItems.Grammar grammar, size_t prod_idx, AstNode[] items) {
-        GrammarItem intermediate = grammar.intermediates[prod_idx];
+        GrammarItems intermediate = grammar.intermediates[prod_idx];
         size_t prod_length = grammar.productions[prod_idx].length;
         AstNode[] prod_items = items[0..prod_length];
-        return AstNode(AstType(interme
-    } ;
+        return AstNode(intermediate, prod_items);
+    },
 };
-*/

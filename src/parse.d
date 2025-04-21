@@ -7,172 +7,240 @@ import std.range.primitives;
 
 template GrammarT (GrammarItem = int) {
 
-    struct Grammar {
-        GrammarItem[] intermediates;
-        GrammarItem[][] productions;
+struct Grammar {
+    GrammarItem[] intermediates;
+    GrammarItem[][] productions;
 
-        GrammarItem root;
-        GrammarItem eof;
+    GrammarItem root;
+    GrammarItem eof;
 
-        this(GrammarItem root, GrammarItem eof) {
-            this.root = root;
-            this.eof = eof;
+    this(GrammarItem root, GrammarItem eof) {
+        this.root = root;
+        this.eof = eof;
+    }
+
+    Grammar add_production(GrammarItem interm, GrammarItem[] production) {
+        this.intermediates ~= interm;
+        this.productions ~= production;
+
+        return this;
+    }
+
+    Grammar add_many_productions(GrammarItem interm, GrammarItem[][] list_of_productions) {
+        foreach(production; list_of_productions) {
+            this.add_production(interm, production);
         }
 
-        Grammar add_production(GrammarItem interm, GrammarItem[] production) {
-            this.intermediates ~= interm;
-            this.productions ~= production;
-
-            return this;
-        }
-
-        Grammar add_many_productions(GrammarItem interm, GrammarItem[][] list_of_productions) {
-            foreach(production; list_of_productions) {
-                this.add_production(interm, production);
-            }
-
-            return this;
-        }
+        return this;
     }
+}
 
 
 
-    bool is_intermediate(Grammar g, GrammarItem item) {
-        if(item == g.eof) return false;
-        foreach(GrammarItem intermediate; g.intermediates) {
-            if(intermediate != g.eof && intermediate == item) { return true; }
-        }
-        return false;
+bool is_intermediate(Grammar g, GrammarItem item) {
+    if(item == g.eof) return false;
+    foreach(GrammarItem intermediate; g.intermediates) {
+        if(intermediate != g.eof && intermediate == item) { return true; }
     }
+    return false;
+}
 
-    void print_productions(Grammar g) {
-        for(size_t i = 0; i < g.intermediates.length; i++){
-            writeln(i, ' ', g.intermediates[i], " ::= ", g.productions[i]);
-        }
-        writeln();
+void print_productions(Grammar g) {
+    for(size_t i = 0; i < g.intermediates.length; i++){
+        writeln(i, ' ', g.intermediates[i], " ::= ", g.productions[i]);
     }
+    writeln();
+}
 
-    GrammarItem find_root(Grammar g) {
-        GrammarItem ret;
-        while(g.is_intermediate(ret) && ret != GrammarItem.max) {ret++;}
-        return ret;
-    }
+GrammarItem find_root(Grammar g) {
+    GrammarItem ret;
+    while(g.is_intermediate(ret) && ret != GrammarItem.max) {ret++;}
+    return ret;
+}
 
-    size_t[] productions_for_intermediate(Grammar g, GrammarItem intermediate) {
-        size_t[] ret;
-        if(!g.is_intermediate(intermediate)) return ret;
+size_t[] productions_for_intermediate(Grammar g, GrammarItem intermediate) {
+    size_t[] ret;
+    if(!g.is_intermediate(intermediate)) return ret;
 
-        for(size_t idx = 0; idx < g.intermediates.length; idx++) {
-            if(g.intermediates[idx] == intermediate) {
-                ret ~= idx;
-            }
-        }
-
-        return ret;
-    }
-
-    GrammarItem[] new_lookahead(Grammar g, StateLine state_line) {
-        GrammarItem[] extended_new_lookahead = g.productions[state_line.production_idx][state_line.progress..$] ~ state_line.lookahead;
-        return g.refine_lookahead(extended_new_lookahead);
-    }
-
-    GrammarItem[] refine_lookahead(Grammar g,GrammarItem[] lookahead) {
-        size_t idx = 1;
-
-        // there should always be a terminal symbol before the end of the array
-        while(g.is_intermediate(lookahead[idx])) { idx++; }
-
-        return lookahead[1..(idx+1)];
-    }
-
-
-
-    const enum Action { ACCEPT, SHIFT, REDUCE, REFUTE }
-    struct ParsingAction {
-        Action action;
-        size_t parameter; // for reduce action is the intermediate and production index, for shift action is the state to add to state stack
-    }
-
-    struct ParsingTableLine {
-        GrammarItem[] expected_items;
-        ParsingAction[] relative_actions;
-        ParsingAction default_action;
-
-        bool insert_action(GrammarItem expected_item, ParsingAction action) {
-            if(this.expected_items.canFind(expected_item)) {
-                return false;
-            } else {
-                this.expected_items ~= expected_item;
-                this.relative_actions ~= action;
-                return true;
-            }
-        }
-
-        ParsingAction get_action(GrammarItem item) {
-            size_t idx = countUntil(this.expected_items, item);
-            if(idx > 0) {
-                return this.relative_actions[idx];
-            } else {
-                return this.default_action;
-            }
+    for(size_t idx = 0; idx < g.intermediates.length; idx++) {
+        if(g.intermediates[idx] == intermediate) {
+            ret ~= idx;
         }
     }
-    alias ParsingTable = ParsingTableLine[];
 
-    struct StateLineMetadata{ Action action; GrammarItem expected_item; };
-    struct StateLine {
-        size_t progress;
-        size_t production_idx;
-        GrammarItem[] lookahead;
-    };
-    struct State {
-        StateLine[] productions;
-        StateLineMetadata[] metadata;
+    return ret;
+}
+
+GrammarItem[] new_lookahead(Grammar g, StateLine state_line) {
+    GrammarItem[] extended_new_lookahead = g.productions[state_line.production_idx][state_line.progress..$] ~ state_line.lookahead;
+    return g.refine_lookahead(extended_new_lookahead);
+}
+
+GrammarItem[] refine_lookahead(Grammar g,GrammarItem[] lookahead) {
+    size_t idx = 1;
+
+    // there should always be a terminal symbol before the end of the array
+    while(g.is_intermediate(lookahead[idx])) { idx++; }
+
+    return lookahead[1..(idx+1)];
+}
+
+
+
+const enum Action { ACCEPT, SHIFT, REDUCE, REFUTE }
+struct ParsingAction {
+    Action action;
+    size_t parameter; // for reduce action is the intermediate and production index, for shift action is the state to add to state stack
+}
+
+struct ParsingTableLine {
+    GrammarItem[] expected_items;
+    ParsingAction[] actions;
+
+    ParsingAction default_action = ParsingAction(Action.REFUTE, 0);
+
+    bool insert_action(GrammarItem expected_item, ParsingAction action) {
+        if(this.expected_items.canFind(expected_item)) {
+            return false;
+        } else {
+            this.expected_items ~= expected_item;
+            this.actions ~= action;
+            return true;
+        }
     }
 
-
-    void print_state_line(Grammar g, StateLine line){
-        string output = "\t";
-        output ~= format("%s", g.intermediates[line.production_idx]);
-        output ~= format(" -> ");
-        output ~= format("%s",g.productions[line.production_idx][0..line.progress]);
-        output ~= format(" . %s (%s)", g.productions[line.production_idx][line.progress..$], line.lookahead);
-        writeln(output);
+    ParsingAction get_action(GrammarItem item) {
+        size_t idx = countUntil(this.expected_items, item);
+        if(idx < this.actions.length) {
+            return this.actions[idx];
+        } else {
+            return this.default_action;
+        }
     }
 
+    void print() {
+        writeln("\t'DEFAULT' : ", this.default_action);
+        for(int i = 0; i < this.actions.length; i++) {
+            writeln("\t'", this.expected_items[i], "' : ", this.actions[i]);
+        }
+    }
+}
+alias ParsingTable = ParsingTableLine[];
 
-    ParsingTable generate_parsing_table(Grammar g) {
-        GrammarItem root_prime = g.find_root();
+struct StateLineMetadata{ Action action; GrammarItem expected_item; };
+struct StateLine {
+    size_t progress;
+    size_t production_idx;
+    GrammarItem[] lookahead;
+};
+struct State {
+    StateLine[] productions;
+    StateLineMetadata[] metadatas;
+
+    void add_state_line(Grammar g, StateLine prod) {
+        this.productions ~= prod;
+        this.metadatas ~= calculate_metadata(g, prod);
+    }
+}
+
+
+void print_state_line(Grammar g, StateLine line){
+    string output = "\t";
+    output ~= format("%s", g.intermediates[line.production_idx]);
+    output ~= format(" -> ");
+    output ~= format("%s", g.productions[line.production_idx][0..line.progress]);
+    output ~= format(" . %s (%s)", g.productions[line.production_idx][line.progress..$], line.lookahead);
+    writeln(output);
+}
+
+StateLineMetadata calculate_metadata(Grammar g, StateLine curr_line) {
+    GrammarItem[] prod = g.productions[curr_line.production_idx];
+
+    StateLineMetadata ret;
+    if(curr_line.progress < prod.length) {
+        ret.action = Action.SHIFT;
+        ret.expected_item = prod[curr_line.progress];
+    }
+    else {
+        ret.expected_item = curr_line.lookahead[0];
+
+        if(curr_line.production_idx == g.productions.length-1) {
+            ret.action = Action.ACCEPT;
+        } else {
+            ret.action = Action.REDUCE;
+        }
+    }
+    
+    return ret;
+}
+
+
+ParsingTable generate_parsing_table(Grammar g) {
+    GrammarItem root_prime = g.find_root();
 // 0) Create the extended grammar like with canonical LR with root symbol S, and it's own symbol S' not in Intermediates nor Terminals set
 // 1) Let state `0` start with Production State `S' -> . S (~)`, where the dot represents the Progress in the production, '~' represents the Eof symbol, all comma separated lists of symbols in the parenthesis are the lookahead
-        State[] generated_states = [
-            State([StateLine(0, g.productions.length, [ g.eof ] )], [StateLineMetadata(Action.SHIFT, g.root)])
-        ];
-        g.add_production(g.eof, [g.root]);
-        g.print_productions();
+    State[] generated_states = [
+        State(
+            [StateLine(0, g.productions.length, [ g.eof ] )],
+            [StateLineMetadata(Action.SHIFT, g.root)])
+    ];
+    g.add_production(g.eof, [g.root]);
+    g.print_productions();
 
+//---------------
+    size_t state_to_shift_to(StateLine[] state_kernel) {
+        size_t ret = 0;
+        while(
+        ret < generated_states.length
+        && !generated_states[ret].productions.startsWith(state_kernel)) {
+            ret++;
+        }
+        return ret;
+    }
 
-        StateLineMetadata calculate_metadata(StateLine curr_line) {
-            GrammarItem[] prod = g.productions[curr_line.production_idx];
+    State refine_tmp_state(Grammar g, State tmp_state) {
+        State refined_state;
 
-            GrammarItem expected_item;
-            if(curr_line.progress < prod.length) { expected_item = prod[curr_line.progress]; }
-            else { expected_item = curr_line.lookahead[0]; }
-
-            StateLineMetadata ret;
-            ret.expected_item = expected_item;
-            if(curr_line.progress < prod.length){
-                ret.action = Action.SHIFT;
-            } else if(curr_line.production_idx == g.productions.length-1) {
-                ret.action = Action.ACCEPT;
-            } else {
-                ret.action = Action.REDUCE;
+        size_t[] reduce_idxes;
+        size_t[] shift_idxes;
+        foreach(i, e; tmp_state.metadatas){
+            final switch(e.action) {
+                case Action.ACCEPT:
+                    refined_state.productions ~= tmp_state.productions[i];
+                    refined_state.metadatas ~= tmp_state.metadatas[i];
+                    break;
+                case Action.REDUCE: reduce_idxes ~= i; break;
+                case Action.SHIFT: shift_idxes ~= i; break;
+                case Action.REFUTE: assert(0, "Unreachable code, parse.d");
             }
-            return ret;
         }
 
+        if(
+            reduce_idxes
+            .map!(i => tmp_state.productions[i].production_idx)
+            .uniq
+            .walkLength == 1
+        ) {
+            auto prod = tmp_state.productions[0];
+            StateLine simplified_line = StateLine(prod.progress, prod.production_idx, [GrammarItem.EOF]);
+            refined_state.productions ~= simplified_line;
+            refined_state.metadatas ~= calculate_metadata(g, simplified_line);
+        } else {
+            foreach(idx; reduce_idxes) {
+                refined_state.productions ~= tmp_state.productions[idx];
+                refined_state.metadatas ~= tmp_state.metadatas[idx];
+            }
+        }
 
-        ParsingTable table;
+        foreach(idx; shift_idxes) {
+            refined_state.productions ~= tmp_state.productions[idx];
+            refined_state.metadatas ~= tmp_state.metadatas[idx];
+        }
+        
+        return refined_state;
+    }
+//---------------
+
 
 // -) For every state:
 // for every state line
@@ -188,150 +256,220 @@ template GrammarT (GrammarItem = int) {
 //             prioritize either number of Intermediates in expected items
 //             length of produciton
 //             frequency of production in group
-//         add TMP state to states and add shift action to current state 
-        for(size_t curr_state_idx = 0; curr_state_idx < generated_states.length; curr_state_idx++) {
-            writeln(curr_state_idx);
-            State curr_state = generated_states[curr_state_idx];
+//         add TMP state to states and add shift action to current state
 
-            size_t state_to_shift_to(StateLine[] state_kernel) {
-                size_t ret = 0;
-                while(
-                ret < generated_states.length
-                && !generated_states[ret].productions.startsWith(state_kernel)) {
-                    ret++;
+    ParsingTable table;
+
+    for(size_t curr_state_idx = 0; curr_state_idx < generated_states.length; curr_state_idx++) {
+        writeln(curr_state_idx);
+        State curr_state = generated_states[curr_state_idx];
+
+        for(size_t idx = 0; idx < curr_state.metadatas.length; idx++) {
+            StateLineMetadata metadata = curr_state.metadatas[idx];
+            StateLine state_line = curr_state.productions[idx];
+
+            size_t[] prod_idxes = g.productions_for_intermediate(metadata.expected_item);
+
+            foreach(prod_idx; prod_idxes) {
+                StateLine prod = StateLine(0, prod_idx, new_lookahead(g, state_line)); 
+                if(!curr_state.productions.canFind(prod)) {
+                    curr_state.productions ~= prod;
+                    curr_state.metadatas ~= calculate_metadata(g, prod);
                 }
-                return ret;
             }
-
-
-
-            foreach(curr_line; curr_state.productions) { g.print_state_line(curr_line); }
-            writeln("\t", table[curr_state_idx]);
-// 6) Stop when Curr_state>Tot_states
         }
+
+        table ~= ParsingTableLine();
+
+        size_t[] reduce_idxes;
+        size_t[] shift_idxes;
+        foreach(i, e; curr_state.metadatas){
+            final switch(e.action) {
+                case Action.ACCEPT:
+                    table[curr_state_idx]
+                    .insert_action(e.expected_item, ParsingAction(Action.ACCEPT, 0));
+                    break;
+                case Action.REDUCE: reduce_idxes ~= i; break;
+                case Action.SHIFT: shift_idxes ~= i; break;
+                case Action.REFUTE: assert(0, "Unreachable code, parse.d");
+            }
+        }
+
+        foreach(reduce_idx; reduce_idxes) {
+            auto r_metadata = curr_state.metadatas[reduce_idx];
+            auto r_state_line = curr_state.productions[reduce_idx];
+            ParsingAction action = {
+                action : r_metadata.action,
+                parameter : r_state_line.production_idx,
+            };
+            if(r_metadata.expected_item == GrammarItem.EOF) {
+                table[curr_state_idx].default_action = action;
+            } else {
+                table[curr_state_idx].insert_action(r_metadata.expected_item, action);
+            }
+        }
+
+
+        GrammarItem[] encountered;
+        foreach(shift_idx; shift_idxes) {
+            auto s_metadata = curr_state.metadatas[shift_idx];
+            auto s_state_line = curr_state.productions[shift_idx];
+            if(encountered.canFind(s_metadata.expected_item)) {
+                continue;
+            } else {
+                encountered ~= s_metadata.expected_item;
+            }
+            State tmp_state =
+                shift_idxes
+                .filter!(i => curr_state.metadatas[i].expected_item == s_metadata.expected_item)
+                .map!((i) {
+                    StateLine curr_prod = curr_state.productions[i];
+                    return StateLine(
+                        curr_prod.progress+1,
+                        curr_prod.production_idx,
+                        curr_prod.lookahead);
+                })
+                .fold!((acc, prod) {
+                    acc.add_state_line(g, prod);
+                    return acc;
+                })(State());
+            State refined_state = refine_tmp_state(g, tmp_state);
+
+            size_t shift_to_idx = state_to_shift_to(refined_state.productions);
+            ParsingAction action = ParsingAction(Action.SHIFT, shift_to_idx);
+            table[curr_state_idx].insert_action(s_metadata.expected_item, action);
+
+            if(shift_to_idx == generated_states.length) {
+                generated_states ~= refined_state;
+            }
+        }
+
+        foreach(curr_line; curr_state.productions) { g.print_state_line(curr_line); }
+        table[curr_state_idx].print();
+// 6) Stop when Curr_state>Tot_states
+    }
 
 /*
 The algorithm for generating a parsing table is as follow:
 Example grammar 
+S ::= D
+S ::= a
+D ::= S a
+
+
+0) Create the extended grammar like with canonical LR with root symbol S, and it's own symbol S' not in Intermediates nor Terminals set
+    S' ::= S
     S ::= D
     S ::= a
     D ::= S a
-
-
-    0) Create the extended grammar like with canonical LR with root symbol S, and it's own symbol S' not in Intermediates nor Terminals set
-        S' ::= S
-        S ::= D
-        S ::= a
-        D ::= S a
-    1) Let state `0` start with Production State `S' -> . S (~)`, where the dot represents the Progress in the production, '~' represents the Eof symbol, all comma separated lists of symbols in the parenthesis are the lookahead
-        0
-            S' -> . S  (~)
-    2) If the item on the right of Progress is an intermediate, add all production(without creating duplicates) of that intermediate, with lookahead equal to all items right of Progress+1 and the production lookahead up to the first Terminal item; repeat for all Production States added
-        0
-            S' -> . S  (~)
-            S -> . D   (~)
-            S -> . a   (~)
-            D -> . S a (~)
-            S -> . D   (a) # this doesn't create a duplicate because the lookahead is different
-            S -> . a   (a)
-            D -> . S a (a) # if we didn't stop at the first terminal symbol here we would start creating Production State with equal cores and increasingly more 'a's in the lookahead
-    3) If Progress+1 is greater than the numbers of items in the production, create a reduction rule of Reduce(Progress, Intermediate) on GrammarItem Lookahead[0]; if a reduce rule shares the grammar item with any other rule there is a conflict
-    4) If Progress+1 falls within the Production, if there isn't an action for the grammr item at Production[Progress+1] then create it with Shift(Tot_states+1); then add the Production with it's Progress increased by one to the state indicated by the action related to it's item
-        0
-            S' -> . S  (~) # Generate action for 'S' and state 1, add (S' -> S . (~)) to state 1
-            S -> . D   (~) # Generate action for 'D' and state 2, add (S -> D . (~)) to state 2
-            S -> . a   (~) # Generate action for 'a' and state 3, add (S -> a . (~)) to state 3
-            D -> . S a (~) # Action for S already exist, append (D -> S . a (~)) to state 1
-            S -> . D   (a) # Action for D already exist, append (S -> D . (a)) to state 2
-            S -> . a   (a) # Action for a already exist, append (S -> a . (a)) to state 3
-            D -> . S a (a) # Action for S already exist, append (D -> S . a (a)) to state 1
-            S: s1
-            D: s2
-            a: s3
-        1
-            S' -> S .  (~)
-            D -> S . a (~)
-            D -> S . a (a)
-        2
-            S -> D .   (~)
-            S -> D .   (a)
-        3
-            S -> a .   (~)
-            S -> a .   (a)
-    5) Once every production has an action in the state, go to Curr_state+1, repeat from step 2
-    6) Stop when Curr_state>Tot_states
+1) Let state `0` start with Production State `S' -> . S (~)`, where the dot represents the Progress in the production, '~' represents the Eof symbol, all comma separated lists of symbols in the parenthesis are the lookahead
+    0
+        S' -> . S  (~)
+2) If the item on the right of Progress is an intermediate, add all production(without creating duplicates) of that intermediate, with lookahead equal to all items right of Progress+1 and the production lookahead up to the first Terminal item; repeat for all Production States added
+    0
+        S' -> . S  (~)
+        S -> . D   (~)
+        S -> . a   (~)
+        D -> . S a (~)
+        S -> . D   (a) # this doesn't create a duplicate because the lookahead is different
+        S -> . a   (a)
+        D -> . S a (a) # if we didn't stop at the first terminal symbol here we would start creating Production State with equal cores and increasingly more 'a's in the lookahead
+3) If Progress+1 is greater than the numbers of items in the production, create a reduction rule of Reduce(Progress, Intermediate) on GrammarItem Lookahead[0]; if a reduce rule shares the grammar item with any other rule there is a conflict
+4) If Progress+1 falls within the Production, if there isn't an action for the grammr item at Production[Progress+1] then create it with Shift(Tot_states+1); then add the Production with it's Progress increased by one to the state indicated by the action related to it's item
+    0
+        S' -> . S  (~) # Generate action for 'S' and state 1, add (S' -> S . (~)) to state 1
+        S -> . D   (~) # Generate action for 'D' and state 2, add (S -> D . (~)) to state 2
+        S -> . a   (~) # Generate action for 'a' and state 3, add (S -> a . (~)) to state 3
+        D -> . S a (~) # Action for S already exist, append (D -> S . a (~)) to state 1
+        S -> . D   (a) # Action for D already exist, append (S -> D . (a)) to state 2
+        S -> . a   (a) # Action for a already exist, append (S -> a . (a)) to state 3
+        D -> . S a (a) # Action for S already exist, append (D -> S . a (a)) to state 1
+        S: s1
+        D: s2
+        a: s3
+    1
+        S' -> S .  (~)
+        D -> S . a (~)
+        D -> S . a (a)
+    2
+        S -> D .   (~)
+        S -> D .   (a)
+    3
+        S -> a .   (~)
+        S -> a .   (a)
+5) Once every production has an action in the state, go to Curr_state+1, repeat from step 2
+6) Stop when Curr_state>Tot_states
 */
-        return table;
-    }
+    return table;
+}
 
-    ParsingAction get_action(ParsingTable table, size_t state, GrammarItem lookahead) {
-        ParsingAction action = table[state].get_action(lookahead);
-        return action;
-    }
+ParsingAction get_action(ParsingTable table, size_t state, GrammarItem lookahead) {
+    ParsingAction action = table[state].get_action(lookahead);
+    return action;
+}
 
-    struct ast_utils(AstNode, Token) {
-        AstNode function(Token item) from_token;
-        GrammarItem function(AstNode node) to_grammar_item;
-        AstNode function(Grammar grammar, size_t prod_idx, AstNode[] items) reduce;
-        @disable this();
-    };
+struct ast_utils(AstNode, Token) {
+    AstNode function(Token item) from_token;
+    GrammarItem function(AstNode node) to_grammar_item;
+    AstNode function(Grammar grammar, size_t prod_idx, AstNode[] items) reduce;
+    @disable this();
+};
 
-    AstNode[] parse(AstNode,Token)
-    ( Grammar g
-    , Token[] input
-    , ast_utils!(AstNode,Token) ast_u) {
+AstNode[] parse(AstNode,Token)
+( Grammar g
+, Token[] input
+, ast_utils!(AstNode,Token) ast_u) {
 
-        ParsingTable table = g.generate_parsing_table();
-        Token[] to_parse = input;
-        AstNode[] processed;
-        AstNode[] right_of_cursor;
-        size_t[] state_stack = [0];
+    ParsingTable table = g.generate_parsing_table();
+    Token[] to_parse = input;
+    AstNode[] processed;
+    AstNode[] right_of_cursor;
+    size_t[] state_stack = [0];
 
 loop:
-        while(true) {
-            bool r_o_c = right_of_cursor.length > 0;
+    while(true) {
+        bool r_o_c = right_of_cursor.length > 0;
 
-            AstNode next_item_processed;
-            if(r_o_c) {
-                next_item_processed = cast(AstNode) right_of_cursor.front;
-            } else {
-                Token next_token = cast(Token) to_parse.front;
-                next_item_processed = ast_u.from_token(next_token);
-            }
-
-            GrammarItem next_item = ast_u.to_grammar_item(next_item_processed);
-            ParsingAction p_action = get_action(table, state_stack.back, next_item);
-
-            writeln(map!(e => ast_u.to_grammar_item(cast(AstNode)e))(processed), '.', map!(e => ast_u.to_grammar_item(cast(AstNode)e))(right_of_cursor), to_parse, '\t', p_action, '\n', state_stack);
-
-            final switch(p_action.action) {
-                case Action.SHIFT:
-                    processed ~= next_item_processed;
-                    state_stack ~= p_action.parameter;
-                    if(r_o_c) right_of_cursor.popFront;
-                    else to_parse.popFront;
-                    break;
-
-                case Action.REDUCE:
-                    size_t progress = g.productions[p_action.parameter].length;
-                    GrammarItem intermediate = g.intermediates[p_action.parameter];
-                    size_t p_length = processed.length-progress;
-                    AstNode[] items = processed[p_length..$];
-                    processed.popBackN(progress);
-                    state_stack.popBackN(progress);
-                    right_of_cursor = ast_u.reduce(g, p_action.parameter, items) ~ right_of_cursor;
-                    break;
-
-                case Action.ACCEPT:
-                    break loop;
-
-                case Action.REFUTE:
-                    break loop;
-            }
+        AstNode next_item_processed;
+        if(r_o_c) {
+            next_item_processed = cast(AstNode) right_of_cursor.front;
+        } else {
+            Token next_token = cast(Token) to_parse.front;
+            next_item_processed = ast_u.from_token(next_token);
         }
 
-        return processed;
+        GrammarItem next_item = ast_u.to_grammar_item(next_item_processed);
+        ParsingAction p_action = get_action(table, state_stack.back, next_item);
+
+        writeln(map!(e => ast_u.to_grammar_item(cast(AstNode)e))(processed), '.', map!(e => ast_u.to_grammar_item(cast(AstNode)e))(right_of_cursor), to_parse, '\t', p_action, '\n', state_stack);
+        writeln();
+
+        final switch(p_action.action) {
+            case Action.SHIFT:
+                processed ~= next_item_processed;
+                state_stack ~= p_action.parameter;
+                if(r_o_c) right_of_cursor.popFront;
+                else to_parse.popFront;
+                break;
+
+            case Action.REDUCE:
+                size_t progress = g.productions[p_action.parameter].length;
+                GrammarItem intermediate = g.intermediates[p_action.parameter];
+                size_t p_length = processed.length-progress;
+                AstNode[] items = processed[p_length..$];
+                processed.popBackN(progress);
+                state_stack.popBackN(progress);
+                right_of_cursor = ast_u.reduce(g, p_action.parameter, items) ~ right_of_cursor;
+                break;
+
+            case Action.ACCEPT:
+            case Action.REFUTE:
+                break loop;
+        }
     }
+
+    return processed;
+}
 };
 
 
