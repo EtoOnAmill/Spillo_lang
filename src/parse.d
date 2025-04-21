@@ -160,8 +160,7 @@ StateLineMetadata calculate_metadata(Grammar g, StateLine curr_line) {
     if(curr_line.progress < prod.length) {
         ret.action = Action.SHIFT;
         ret.expected_item = prod[curr_line.progress];
-    }
-    else {
+    } else {
         ret.expected_item = curr_line.lookahead[0];
 
         if(curr_line.production_idx == g.productions.length-1) {
@@ -170,15 +169,13 @@ StateLineMetadata calculate_metadata(Grammar g, StateLine curr_line) {
             ret.action = Action.REDUCE;
         }
     }
-    
+
     return ret;
 }
 
 
 ParsingTable generate_parsing_table(Grammar g) {
     GrammarItem root_prime = g.find_root();
-// 0) Create the extended grammar like with canonical LR with root symbol S, and it's own symbol S' not in Intermediates nor Terminals set
-// 1) Let state `0` start with Production State `S' -> . S (~)`, where the dot represents the Progress in the production, '~' represents the Eof symbol, all comma separated lists of symbols in the parenthesis are the lookahead
     State[] generated_states = [
         State(
             [StateLine(0, g.productions.length, [ g.eof ] )],
@@ -473,7 +470,88 @@ loop:
 };
 
 
-//    Grammar!int __ = new Grammar!int;
-//    Grammar!long ___ = new Grammar!long;
-//    Grammar!wchar ____ = new Grammar!wchar;
-//    Grammar!float _____ = new Grammar!float;
+/*
+intermediate : prod_name = item item item ; prod_name = item item item .
+
+white space before and after : = ; and .
+every production must have a prod_name
+the prod_name can be the same as intermediate
+cannot start with RESERVED
+*/
+mixin template Boilerplateinator(alias grammar_name, alias root_symbol, alias eof_symbol, alias elements) {
+    mixin(make(elements, grammar_name, root_symbol, eof_symbol));
+}
+string make(string elements, string grammar_name, string root_symbol, string eof_symbol) {
+
+    string[] items;
+
+    string curr_intermediate;
+    string[] intermediates;
+    string[] terminals;
+    string[] prod_names;
+    string[] curr_prod_item;
+    string[][] prod_items;
+
+    enum State { Intermediate, ProdName, ProdItems }
+    State curr_state;
+
+loop:
+    foreach(word; split(elements)) {
+        final switch (curr_state) {
+            case State.Intermediate:
+                if(word == ":"){ curr_state = State.ProdName; }
+                else {
+                    curr_intermediate = word;
+                    if(!items.canFind(word)) { items ~= word; }
+                }
+                break;
+            case State.ProdName:
+                if(word == "="){ curr_state = State.ProdItems; }
+                else { prod_names ~= word; intermediates ~= curr_intermediate; }
+                break;
+            case State.ProdItems:
+                if(word == ".") { prod_items ~= curr_prod_item; curr_prod_item = []; curr_state = State.Intermediate; }
+                else if(word == ";") { prod_items ~= curr_prod_item; curr_prod_item = []; curr_state = State.ProdName; }
+                else {
+                    curr_prod_item ~= word;
+                    if(!items.canFind(word)) { items ~= word; }
+                }
+                break;
+        }
+    }
+
+    terminals = filter!(e => !intermediates.canFind(e))(items).array;
+
+    string generate_grammar =
+        "parse.GrammarT!GrammarItems.Grammar " ~ grammar_name ~ " =
+{ GrammarT!GrammarItems.Grammar g = GrammarT!GrammarItems.Grammar(GrammarItems." ~ root_symbol ~ ", GrammarItems." ~ eof_symbol ~ ");\n";
+    for(size_t idx = 0; idx < prod_items.length; idx++) {
+        auto i = intermediates[idx];
+        auto p = prod_items[idx];
+        string formatted =
+            "g.add_production(GrammarItems."
+            ~ i
+            ~ ",\n\t[ "
+            ~ p.map!(e => "GrammarItems." ~ e).join(",")
+            ~ " ]);\n";
+        generate_grammar ~= formatted;
+    }
+    generate_grammar ~= "\treturn g; }();\n";
+
+
+    string grammar_items_enum = "enum GrammarItems { EOF, Invalid\n\t, ";
+    foreach(item; items) {
+        grammar_items_enum ~= item ~ "\n\t, ";
+    }
+    grammar_items_enum ~= "}\n";
+
+
+    string AstType = "enum AstType \n{ ";
+    foreach(prod_name; prod_names) {
+        AstType ~= prod_name ~ "\n\t, ";
+    }
+    AstType ~= "}\n";
+
+    return
+        grammar_items_enum ~ AstType ~ generate_grammar;
+}

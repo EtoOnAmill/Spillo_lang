@@ -6,108 +6,17 @@ import std.array;
 import parse;
 import lex;
 
-
-mixin template open(alias ENUM) {
-    static foreach(alias element;EnumMembers!ENUM) {
-        mixin(ENUM.stringof, ' ', element.stringof, '=', ENUM.stringof, '.', element.stringof, ';');
-    }
-}
-/*
-intermediate : prod_name = item item item ; prod_name = item item item .
-
-white space before and after : = ; and .
-every production must have a prod_name
-the prod_name can be the same as intermediate
-cannot start with RESRVED
-*/
-mixin template Boilerplateinator(alias elements) {
-    mixin(make(elements));
-}
-string make(string elements) {
-
-    string[] items;
-
-    string curr_intermediate;
-    string[] intermediates;
-    string[] terminals;
-    string[] prod_names;
-    string[] curr_prod_item;
-    string[][] prod_items;
-
-    enum State { Intermediate, ProdName, ProdItems }
-    State curr_state;
-
-loop:
-    foreach(word; split(elements)) {
-        final switch (curr_state) {
-            case State.Intermediate:
-                if(word == ":"){ curr_state = State.ProdName; }
-                else {
-                    curr_intermediate = word;
-                    if(!items.canFind(word)) { items ~= word; }
-                }
-                break;
-            case State.ProdName:
-                if(word == "="){ curr_state = State.ProdItems; }
-                else { prod_names ~= word; intermediates ~= curr_intermediate; }
-                break;
-            case State.ProdItems:
-                if(word == ".") { prod_items ~= curr_prod_item; curr_prod_item = []; curr_state = State.Intermediate; }
-                else if(word == ";") { prod_items ~= curr_prod_item; curr_prod_item = []; curr_state = State.ProdName; }
-                else {
-                    curr_prod_item ~= word;
-                    if(!items.canFind(word)) { items ~= word; }
-                }
-                break;
-        }
-    }
-
-    terminals = filter!(e => !intermediates.canFind(e))(items).array;
-
-    string generate_grammar =
-        "parse.GrammarT!GrammarItems.Grammar spillocore =
-{ GrammarT!GrammarItems.Grammar g = GrammarT!GrammarItems.Grammar(GrammarItems.Sort, GrammarItems.EOF);\n";
-    for(size_t idx = 0; idx < prod_items.length; idx++) {
-        auto i = intermediates[idx];
-        auto p = prod_items[idx];
-        string formatted =
-            "g.add_production(GrammarItems."
-            ~ i
-            ~ ",\n\t[ "
-            ~ p.map!(e => "GrammarItems." ~ e).join(",")
-            ~ " ]);\n";
-        generate_grammar ~= formatted;
-    }
-    generate_grammar ~= "\treturn g; }();\n";
-
-
-    string grammar_items_enum = "enum GrammarItems { EOF, Invalid\n\t, ";
-    foreach(item; items) {
-        grammar_items_enum ~= item ~ "\n\t, ";
-    }
-    grammar_items_enum ~= "}\n";
-
-
-    string AstType = "enum AstType \n{ ";
-    foreach(prod_name; prod_names) {
-        AstType ~= prod_name ~ "\n\t, ";
-    }
-    AstType ~= "}\n";
-
-    return
-        grammar_items_enum ~ AstType ~ generate_grammar;
-}
-
-mixin Boilerplateinator!"
+mixin Boilerplateinator!("spillocore", "Sort", "EOF", "
 Sort :
     SortLitteral = Litteral ;
     SortLambda = With Fnbranch Done ;
 
     SortPair = Sort Sort Pair ;
     SortTuple = Sort Sort Tuple ;
-    SortFunction = Sort Sort Function ;
+
     SortApply = Sort Sort Apply ;
     SortRecurse = Sort Sort Recurse ;
+    SortFunction = Sort Sort Function ;
 
     SortDepTuple = Sort Of Of Pattunit Sort Tuple ;
     SortDepFunction = Sort Of Of Pattunit Sort Function ;
@@ -147,7 +56,7 @@ Pattunit :
 Sortunit :
     SortUnitLitteral = Litteral ;
     SortUnitBounded = Lp Sort Rp .
-";
+");
 
 GrammarItems token_to_grammar_item(Token t) {
     final switch(t.tt) {
