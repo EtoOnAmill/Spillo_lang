@@ -4,11 +4,13 @@ import std.array;
 import std.algorithm;
 import std.format;
 import std.range.primitives;
+import std.conv;
 
-template GrammarT (GrammarItem = int) {
+template GrammarT (GrammarItem = int, AstType) {
 
 struct Grammar {
     GrammarItem[] intermediates;
+    AstType[] production_names;
     GrammarItem[][] productions;
 
     GrammarItem root;
@@ -19,16 +21,17 @@ struct Grammar {
         this.eof = eof;
     }
 
-    Grammar add_production(GrammarItem interm, GrammarItem[] production) {
+    Grammar add_production(GrammarItem interm, AstType ast_type, GrammarItem[] production) {
         this.intermediates ~= interm;
         this.productions ~= production;
+        this.production_names ~= ast_type;
 
         return this;
     }
 
-    Grammar add_many_productions(GrammarItem interm, GrammarItem[][] list_of_productions) {
-        foreach(production; list_of_productions) {
-            this.add_production(interm, production);
+    Grammar add_many_productions(GrammarItem interm, AstType[] prod_names, GrammarItem[][] list_of_productions) {
+        foreach(i, production; list_of_productions) {
+            this.add_production(interm, prod_names[i], production);
         }
 
         return this;
@@ -47,15 +50,9 @@ bool is_intermediate(Grammar g, GrammarItem item) {
 
 void print_productions(Grammar g) {
     for(size_t i = 0; i < g.intermediates.length; i++){
-        writeln(i, ' ', g.intermediates[i], " ::= ", g.productions[i]);
+        writeln(i, ' ', g.intermediates[i], " :: ", g.production_names[i], " = ", g.productions[i]);
     }
     writeln();
-}
-
-GrammarItem find_root(Grammar g) {
-    GrammarItem ret;
-    while(g.is_intermediate(ret) && ret != GrammarItem.max) {ret++;}
-    return ret;
 }
 
 size_t[] productions_for_intermediate(Grammar g, GrammarItem intermediate) {
@@ -72,7 +69,9 @@ size_t[] productions_for_intermediate(Grammar g, GrammarItem intermediate) {
 }
 
 GrammarItem[] new_lookahead(Grammar g, StateLine state_line) {
-    GrammarItem[] extended_new_lookahead = g.productions[state_line.production_idx][state_line.progress..$] ~ state_line.lookahead;
+    GrammarItem[] extended_new_lookahead =
+        g.productions[state_line.production_idx][state_line.progress..$]
+        ~ state_line.lookahead;
     return g.refine_lookahead(extended_new_lookahead);
 }
 
@@ -127,12 +126,12 @@ struct ParsingTableLine {
 }
 alias ParsingTable = ParsingTableLine[];
 
-struct StateLineMetadata{ Action action; GrammarItem expected_item; };
+struct StateLineMetadata{ Action action; GrammarItem expected_item; }
 struct StateLine {
     size_t progress;
     size_t production_idx;
     GrammarItem[] lookahead;
-};
+}
 struct State {
     StateLine[] productions;
     StateLineMetadata[] metadatas;
@@ -175,13 +174,12 @@ StateLineMetadata calculate_metadata(Grammar g, StateLine curr_line) {
 
 
 ParsingTable generate_parsing_table(Grammar g) {
-    GrammarItem root_prime = g.find_root();
     State[] generated_states = [
         State(
             [StateLine(0, g.productions.length, [ g.eof ] )],
             [StateLineMetadata(Action.SHIFT, g.root)])
     ];
-    g.add_production(g.eof, [g.root]);
+    g.add_production(g.eof, AstType.ROOT, [g.root]);
     g.print_productions();
 
 //---------------
@@ -310,7 +308,6 @@ ParsingTable generate_parsing_table(Grammar g) {
         GrammarItem[] encountered;
         foreach(shift_idx; shift_idxes) {
             auto s_metadata = curr_state.metadatas[shift_idx];
-            auto s_state_line = curr_state.productions[shift_idx];
             if(encountered.canFind(s_metadata.expected_item)) {
                 continue;
             } else {
@@ -343,79 +340,30 @@ ParsingTable generate_parsing_table(Grammar g) {
 
         foreach(curr_line; curr_state.productions) { g.print_state_line(curr_line); }
         table[curr_state_idx].print();
-// 6) Stop when Curr_state>Tot_states
     }
 
-/*
-The algorithm for generating a parsing table is as follow:
-Example grammar 
-S ::= D
-S ::= a
-D ::= S a
-
-
-0) Create the extended grammar like with canonical LR with root symbol S, and it's own symbol S' not in Intermediates nor Terminals set
-    S' ::= S
-    S ::= D
-    S ::= a
-    D ::= S a
-1) Let state `0` start with Production State `S' -> . S (~)`, where the dot represents the Progress in the production, '~' represents the Eof symbol, all comma separated lists of symbols in the parenthesis are the lookahead
-    0
-        S' -> . S  (~)
-2) If the item on the right of Progress is an intermediate, add all production(without creating duplicates) of that intermediate, with lookahead equal to all items right of Progress+1 and the production lookahead up to the first Terminal item; repeat for all Production States added
-    0
-        S' -> . S  (~)
-        S -> . D   (~)
-        S -> . a   (~)
-        D -> . S a (~)
-        S -> . D   (a) # this doesn't create a duplicate because the lookahead is different
-        S -> . a   (a)
-        D -> . S a (a) # if we didn't stop at the first terminal symbol here we would start creating Production State with equal cores and increasingly more 'a's in the lookahead
-3) If Progress+1 is greater than the numbers of items in the production, create a reduction rule of Reduce(Progress, Intermediate) on GrammarItem Lookahead[0]; if a reduce rule shares the grammar item with any other rule there is a conflict
-4) If Progress+1 falls within the Production, if there isn't an action for the grammr item at Production[Progress+1] then create it with Shift(Tot_states+1); then add the Production with it's Progress increased by one to the state indicated by the action related to it's item
-    0
-        S' -> . S  (~) # Generate action for 'S' and state 1, add (S' -> S . (~)) to state 1
-        S -> . D   (~) # Generate action for 'D' and state 2, add (S -> D . (~)) to state 2
-        S -> . a   (~) # Generate action for 'a' and state 3, add (S -> a . (~)) to state 3
-        D -> . S a (~) # Action for S already exist, append (D -> S . a (~)) to state 1
-        S -> . D   (a) # Action for D already exist, append (S -> D . (a)) to state 2
-        S -> . a   (a) # Action for a already exist, append (S -> a . (a)) to state 3
-        D -> . S a (a) # Action for S already exist, append (D -> S . a (a)) to state 1
-        S: s1
-        D: s2
-        a: s3
-    1
-        S' -> S .  (~)
-        D -> S . a (~)
-        D -> S . a (a)
-    2
-        S -> D .   (~)
-        S -> D .   (a)
-    3
-        S -> a .   (~)
-        S -> a .   (a)
-5) Once every production has an action in the state, go to Curr_state+1, repeat from step 2
-6) Stop when Curr_state>Tot_states
-*/
     return table;
 }
+
 
 ParsingAction get_action(ParsingTable table, size_t state, GrammarItem lookahead) {
     ParsingAction action = table[state].get_action(lookahead);
     return action;
 }
 
-struct ast_utils(AstNode, Token) {
+
+struct Ast_utils(AstNode, Token) {
     AstNode function(Token item) from_token;
     GrammarItem function(AstNode node) to_grammar_item;
     AstNode function(Grammar grammar, size_t prod_idx, AstNode[] items) reduce;
     @disable this();
-};
+}
+
 
 AstNode[] parse(AstNode,Token)
 ( Grammar g
 , Token[] input
-, ast_utils!(AstNode,Token) ast_u) {
+, Ast_utils!(AstNode,Token) ast_u) {
 
     ParsingTable table = g.generate_parsing_table();
     Token[] to_parse = input;
@@ -438,7 +386,21 @@ loop:
         GrammarItem next_item = ast_u.to_grammar_item(next_item_processed);
         ParsingAction p_action = get_action(table, state_stack.back, next_item);
 
-        writeln(map!(e => ast_u.to_grammar_item(cast(AstNode)e))(processed), '.', map!(e => ast_u.to_grammar_item(cast(AstNode)e))(right_of_cursor), to_parse, '\t', p_action, '\n', state_stack);
+        writeln
+            ( map!(e =>
+                ast_u.to_grammar_item(cast(AstNode)e).to!string
+                ~ "::"
+                ~ e.ast_type.to!string) (processed)
+            , '.'
+            , map!(e =>
+                ast_u.to_grammar_item(cast(AstNode)e).to!string
+                ~ "::"
+                ~ e.ast_type.to!string) (right_of_cursor)
+            , to_parse
+            , '\t'
+            , p_action
+            , '\n', state_stack);
+
         writeln();
 
         final switch(p_action.action) {
@@ -451,7 +413,6 @@ loop:
 
             case Action.REDUCE:
                 size_t progress = g.productions[p_action.parameter].length;
-                GrammarItem intermediate = g.intermediates[p_action.parameter];
                 size_t p_length = processed.length-progress;
                 AstNode[] items = processed[p_length..$];
                 processed.popBackN(progress);
@@ -467,7 +428,7 @@ loop:
 
     return processed;
 }
-};
+}
 
 
 /*
@@ -495,7 +456,6 @@ string make(string elements, string grammar_name, string root_symbol, string eof
     enum State { Intermediate, ProdName, ProdItems }
     State curr_state;
 
-loop:
     foreach(word; split(elements)) {
         final switch (curr_state) {
             case State.Intermediate:
@@ -523,14 +483,22 @@ loop:
     terminals = filter!(e => !intermediates.canFind(e))(items).array;
 
     string generate_grammar =
-        "parse.GrammarT!GrammarItems.Grammar " ~ grammar_name ~ " =
-{ GrammarT!GrammarItems.Grammar g = GrammarT!GrammarItems.Grammar(GrammarItems." ~ root_symbol ~ ", GrammarItems." ~ eof_symbol ~ ");\n";
+        "alias GrammarTinstance = GrammarT!(GrammarItems, AstType);\n"
+        ~ "GrammarTinstance.Grammar "
+        ~ grammar_name
+        ~ " = { GrammarTinstance.Grammar g = GrammarTinstance.Grammar(GrammarItems."
+        ~ root_symbol
+        ~ ", GrammarItems."
+        ~ eof_symbol
+        ~ ");\n";
     for(size_t idx = 0; idx < prod_items.length; idx++) {
         auto i = intermediates[idx];
         auto p = prod_items[idx];
         string formatted =
             "g.add_production(GrammarItems."
             ~ i
+            ~ ", AstType."
+            ~ prod_names[idx]
             ~ ",\n\t[ "
             ~ p.map!(e => "GrammarItems." ~ e).join(",")
             ~ " ]);\n";
@@ -539,14 +507,14 @@ loop:
     generate_grammar ~= "\treturn g; }();\n";
 
 
-    string grammar_items_enum = "enum GrammarItems { EOF, Invalid\n\t, ";
+    string grammar_items_enum = "enum GrammarItems : uint { EOF, Invalid\n\t, ";
     foreach(item; items) {
         grammar_items_enum ~= item ~ "\n\t, ";
     }
     grammar_items_enum ~= "}\n";
 
 
-    string AstType = "enum AstType \n{ ";
+    string AstType = "enum AstType : uint \n{ ROOT, TERMINAL, ";
     foreach(prod_name; prod_names) {
         AstType ~= prod_name ~ "\n\t, ";
     }

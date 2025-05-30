@@ -8,10 +8,12 @@ import parse;
 import parse_spillocore;
 
 void main(){
-    alias Grammar = GrammarT!(parse_spillocore.GrammarItems);
-    writeln( Grammar.generate_parsing_table( parse_spillocore.spillocore));
+    //writeln( GrammarTinstance.generate_parsing_table( parse_spillocore.spillocore));
     string spillo = "a >b:B; b b / <!=:(_:(A A %)) 1 /";
     writeln( lex.lex_spillo(spillo) );
     writeln();
-    writeln( Grammar.parse!(AstNode)( parse_spillocore.spillocore, lex.lex_spillo(spillo), parse_spillocore.ast_u));
+    print_ast_node(
+        GrammarTinstance.parse!(AstNode)( parse_spillocore.spillocore, lex.lex_spillo(spillo), parse_spillocore.ast_u)[0]
+        , 0)
+    ;
 }

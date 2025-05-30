@@ -5,7 +5,7 @@ OBJ=$(OBJD)/lex.o $(OBJD)/parse.o $(OBJD)/parse_spillocore.o $(OBJD)/spillocore.
 
 DC=dmd
 
-DFLAGS=-w -c -I=$(SRCD)
+DFLAGS=-debug -g -w -c -I=$(SRCD)
 
 
 all : $(OBJ)
