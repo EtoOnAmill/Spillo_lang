@@ -24,7 +24,8 @@ Sort :
     SortDepDecl = Sort Equal Of Pattunit .
 
 Patt :
-    Patt = Typelesspatt Of Sortunit .
+    PattTypeless = Typelesspatt ;
+    PattTyped = Typelesspatt Of Sortunit .
 Typelesspatt :
     PattLitteral = Litteral ;
     PattAlternative = Alt Sortunit ;
@@ -172,7 +173,8 @@ AstNode reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, AstNode[] item
     case AstType.SortDepBind: ret.ast.sortDepBind = SortDepBind(items[0], items[3]); break;
     case AstType.SortDepDecl: ret.ast.sortDepDecl = SortDepDecl(items[0], items[3]); break;
 
-    case AstType.Patt: ret.ast.patt = Patt(items[0], items[2]); break;
+    case AstType.PattTyped: ret.ast.patt = PattTyped(items[0], items[2]); break;
+    case AstType.PattTypeless: ret.ast.pattTypeless = PattTypeless(items[0]); break;
     case AstType.PattAlternative: ret.ast.pattAlternative = PattAlternative(items[1]); break;
     case AstType.PattEquality: ret.ast.pattEquality = PattEquality(items[0], items[2]); break;
     case AstType.PattPair: ret.ast.pattPair = PattPair(items[0], items[1]); break;
@@ -203,7 +205,8 @@ union Ast {
     SortFunction sortFunction;
     SortDepBind sortDepBind;
     SortDepDecl sortDepDecl;
-    Patt patt;
+    PattTyped patt;
+    PattTypeless pattTypeless;
     PattLitteral pattLitteral;
     PattAlternative pattAlternative;
     PattEquality pattEquality;
@@ -237,7 +240,8 @@ struct SortRecurse { AstNode sort_left; AstNode sort_right; }
 struct SortFunction { AstNode sort_left; AstNode sort_right; }
 struct SortDepBind { AstNode sort; AstNode pattern; }
 struct SortDepDecl { AstNode sort; AstNode pattern; }
-struct Patt { AstNode typeless; AstNode type; }
+struct PattTyped { AstNode typeless; AstNode type; }
+struct PattTypeless { AstNode typeless; }
 struct PattLitteral { AstNode value; }
 struct PattAlternative { AstNode sort; }
 struct PattEquality { AstNode pattern; AstNode pattern_unit; }
@@ -271,7 +275,6 @@ void print_ast_node(AstNode node, size_t indentation, string title) {
 }
 
 void print_ast_node(AstNode node, size_t indentation) {
-
 
     write_indent(indentation);
     write(node.type.to!string);
@@ -318,7 +321,10 @@ void print_ast_node(AstNode node, size_t indentation) {
             print_ast_node(node.ast.sortDepBind.sort, new_indent, "Sort:");
             print_ast_node(node.ast.sortDepBind.pattern, new_indent, "Pattern:");
             break;
-        case AstType.Patt:
+        case AstType.PattTypeless:
+            print_ast_node(node.ast.pattTypeless.typeless, new_indent);
+            break;
+        case AstType.PattTyped:
             print_ast_node(node.ast.patt.typeless, new_indent, "Typeless:");
             print_ast_node(node.ast.patt.type, new_indent, "Type:");
             break;
