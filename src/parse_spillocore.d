@@ -171,13 +171,7 @@ AstNode reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, AstNode[] item
     case AstType.BinOpRecurse: ret.ast.binOpRecurse = BinOpRecurse(items[0]); break;
     case AstType.BinOpApply: ret.ast.binOpApply = BinOpApply(items[0]); break;
     case AstType.BinOpFunction: ret.ast.binOpFunction = BinOpFunction(items[0]); break;
-    /*
-    case AstType.SortPair: ret.ast.sortPair = SortPair(items[0], items[1]); break;
-    case AstType.SortTuple: ret.ast.sortTuple = SortTuple(items[0], items[1]); break;
-    case AstType.SortApply: ret.ast.sortApply = SortApply(items[0], items[1]); break;
-    case AstType.SortRecurse: ret.ast.sortRecurse = SortRecurse(items[0], items[1]); break;
-    case AstType.SortFunction: ret.ast.sortFunction = SortFunction(items[0], items[1]); break;
-    */
+
     case AstType.SortDepBind: ret.ast.sortDepBind = SortDepBind(items[0], items[3]); break;
     case AstType.SortDepDecl: ret.ast.sortDepDecl = SortDepDecl(items[0], items[3]); break;
 
@@ -207,11 +201,6 @@ union Ast {
     SortLitteral sortLitteral;
     SortLambda sortLambda;
     SortBinOp sortBinOp;
-    SortPair sortPair;
-    SortTuple sortTuple;
-    SortApply sortApply;
-    SortRecurse sortRecurse;
-    SortFunction sortFunction;
     SortDepBind sortDepBind;
     SortDepDecl sortDepDecl;
 
@@ -256,11 +245,6 @@ union Ast {
 struct SortLitteral { AstNode value; }
 struct SortLambda { AstNode fnBranch; }
 struct SortBinOp { AstNode sort_left; AstNode sort_right; AstNode binOp; } 
-struct SortPair { AstNode sort_left; AstNode sort_right; }
-struct SortTuple { AstNode sort_left; AstNode sort_right; }
-struct SortApply { AstNode sort_left; AstNode sort_right; }
-struct SortRecurse { AstNode sort_left; AstNode sort_right; }
-struct SortFunction { AstNode sort_left; AstNode sort_right; }
 struct SortDepBind { AstNode sort; AstNode pattern; }
 struct SortDepDecl { AstNode sort; AstNode pattern; }
 
@@ -269,7 +253,6 @@ struct BinOpTuple { AstNode value; }
 struct BinOpFunction { AstNode value; }
 struct BinOpApply { AstNode value; }
 struct BinOpRecurse { AstNode value; }
-
 
 struct PattTyped { AstNode typeless; AstNode type; }
 struct PattTypeless { AstNode typeless; }
