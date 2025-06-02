@@ -10,18 +10,17 @@ import lex;
 mixin Boilerplateinator!("spillocore", "Sort", "EOF", "
 Sort :
     SortLitteral = Litteral ;
+    SortBinOp = Sort Sort BinOp EMPTY ;
     SortLambda = With Fnbranch Done ;
-
-    SortPair = Sort Sort Pair ;
-    SortTuple = Sort Sort Tuple ;
-
-    SortApply = Sort Sort Apply ;
-    SortRecurse = Sort Sort Recurse ;
-    SortFunction = Sort Sort Function ;
-
     SortDepBind = Sort Of Of Pattunit ;
-
     SortDepDecl = Sort Equal Of Pattunit .
+
+BinOp :
+    BinOpPair = Pair ;
+    BinOpTuple = Tuple ;
+    BinOpFunction = Function ;
+    BinOpApply = Apply ;
+    BinOpRecurse = Recurse .
 
 Patt :
     PattTypeless = Typelesspatt ;
@@ -30,7 +29,7 @@ Typelesspatt :
     PattLitteral = Litteral ;
     PattAlternative = Alt Sortunit ;
     PattEquality = Patt Equal Pattunit ;
-    PattPair = Patt Patt Pair .
+    PattBinOp = Patt Patt BinOp EMPTY .
 
 Fnbranch :
     FnBranchLast = Guard Do Sort ;
@@ -89,6 +88,7 @@ GrammarItems string_to_grammar_item(string s) {
         case "|": case "or":  return GrammarItems.Or;
         case "~": case "alt":  return GrammarItems.Alt;
         case ".": case "dot":  return GrammarItems.Dot;
+        case "": case "EMPTY":  return GrammarItems.EMPTY;
         default: return GrammarItems.Invalid;
     }
 }
@@ -165,11 +165,19 @@ AstNode reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, AstNode[] item
     case AstType.SortUnitBounded: ret.ast.sortUnitBounded = SortUnitBounded(items[1]); break;
 
     case AstType.SortLambda: ret.ast.sortLambda = SortLambda(items[1]); break;
+    case AstType.SortBinOp: ret.ast.sortBinOp = SortBinOp(items[0], items[1], items[2]); break;
+    case AstType.BinOpPair: ret.ast.binOpPair = BinOpPair(items[0]); break;
+    case AstType.BinOpTuple: ret.ast.binOpTuple = BinOpTuple(items[0]); break;
+    case AstType.BinOpRecurse: ret.ast.binOpRecurse = BinOpRecurse(items[0]); break;
+    case AstType.BinOpApply: ret.ast.binOpApply = BinOpApply(items[0]); break;
+    case AstType.BinOpFunction: ret.ast.binOpFunction = BinOpFunction(items[0]); break;
+    /*
     case AstType.SortPair: ret.ast.sortPair = SortPair(items[0], items[1]); break;
     case AstType.SortTuple: ret.ast.sortTuple = SortTuple(items[0], items[1]); break;
     case AstType.SortApply: ret.ast.sortApply = SortApply(items[0], items[1]); break;
     case AstType.SortRecurse: ret.ast.sortRecurse = SortRecurse(items[0], items[1]); break;
     case AstType.SortFunction: ret.ast.sortFunction = SortFunction(items[0], items[1]); break;
+    */
     case AstType.SortDepBind: ret.ast.sortDepBind = SortDepBind(items[0], items[3]); break;
     case AstType.SortDepDecl: ret.ast.sortDepDecl = SortDepDecl(items[0], items[3]); break;
 
@@ -177,14 +185,14 @@ AstNode reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, AstNode[] item
     case AstType.PattTypeless: ret.ast.pattTypeless = PattTypeless(items[0]); break;
     case AstType.PattAlternative: ret.ast.pattAlternative = PattAlternative(items[1]); break;
     case AstType.PattEquality: ret.ast.pattEquality = PattEquality(items[0], items[2]); break;
-    case AstType.PattPair: ret.ast.pattPair = PattPair(items[0], items[1]); break;
+    case AstType.PattBinOp: ret.ast.pattBinOp = PattBinOp(items[0], items[1], items[2]); break;
 
     case AstType.FnBranchLast: ret.ast.fnBranchLast = FnBranchLast(items[0], items[2]); break;
     case AstType.FnBranch: ret.ast.fnBranch = FnBranch(items[0], items[2], items[4]); break;
 
     case AstType.Guard: ret.ast.guard = Guard(items[0], items[1], items[2]); break;
     case AstType.AndGuard: ret.ast.andGuard = AndGuard(items[0], items[1], items[3]); break;
-    case AstType.OrGuard: ret.ast.orGuard = OrGuard(items[0]); break;
+    case AstType.OrGuard: ret.ast.orGuard = OrGuard(items[1]); break;
     case AstType.AndGuardEmpty: ret.ast.andGuardEmpty = AndGuardEmpty(); break;
     case AstType.OrGuardEmpty: ret.ast.orGuardEmpty = OrGuardEmpty(); break;
     }
@@ -198,6 +206,7 @@ union Ast {
 
     SortLitteral sortLitteral;
     SortLambda sortLambda;
+    SortBinOp sortBinOp;
     SortPair sortPair;
     SortTuple sortTuple;
     SortApply sortApply;
@@ -205,27 +214,40 @@ union Ast {
     SortFunction sortFunction;
     SortDepBind sortDepBind;
     SortDepDecl sortDepDecl;
+
+    BinOpPair binOpPair;
+    BinOpTuple binOpTuple;
+    BinOpFunction binOpFunction;
+    BinOpApply binOpApply;
+    BinOpRecurse binOpRecurse;
+
     PattTyped patt;
     PattTypeless pattTypeless;
     PattLitteral pattLitteral;
     PattAlternative pattAlternative;
     PattEquality pattEquality;
-    PattPair pattPair;
+    PattBinOp pattBinOp;
+
     FnBranchLast fnBranchLast;
     FnBranch fnBranch;
+
     Guard guard;
     AndGuardEmpty andGuardEmpty;
     AndGuard andGuard;
     OrGuardEmpty orGuardEmpty;
     OrGuard orGuard;
+
     LitteralNumber litteralNumber;
     LitteralDecimal litteralDecimal;
     LitteralWord litteralWord;
     LitteralString litteralString;
+
     PattUnitLitteral pattUnitLitteral;
     PattUnitBounded pattUnitBounded;
+
     SortUnitLitteral sortUnitLitteral;
     SortUnitBounded sortUnitBounded;
+
     ROOT root;
     TERMINAL terminal;
 
@@ -233,6 +255,7 @@ union Ast {
 
 struct SortLitteral { AstNode value; }
 struct SortLambda { AstNode fnBranch; }
+struct SortBinOp { AstNode sort_left; AstNode sort_right; AstNode binOp; } 
 struct SortPair { AstNode sort_left; AstNode sort_right; }
 struct SortTuple { AstNode sort_left; AstNode sort_right; }
 struct SortApply { AstNode sort_left; AstNode sort_right; }
@@ -240,27 +263,41 @@ struct SortRecurse { AstNode sort_left; AstNode sort_right; }
 struct SortFunction { AstNode sort_left; AstNode sort_right; }
 struct SortDepBind { AstNode sort; AstNode pattern; }
 struct SortDepDecl { AstNode sort; AstNode pattern; }
+
+struct BinOpPair { AstNode value; }
+struct BinOpTuple { AstNode value; }
+struct BinOpFunction { AstNode value; }
+struct BinOpApply { AstNode value; }
+struct BinOpRecurse { AstNode value; }
+
+
 struct PattTyped { AstNode typeless; AstNode type; }
 struct PattTypeless { AstNode typeless; }
 struct PattLitteral { AstNode value; }
 struct PattAlternative { AstNode sort; }
 struct PattEquality { AstNode pattern; AstNode pattern_unit; }
-struct PattPair { AstNode patt_left; AstNode patt_right; }
+struct PattBinOp { AstNode patt_left; AstNode patt_right; AstNode binOp; }
+
 struct FnBranchLast { AstNode guard; AstNode sort; }
 struct FnBranch { AstNode guard; AstNode sort; AstNode branch; }
+
 struct Guard { AstNode pattern; AstNode and; AstNode or; }
 struct AndGuardEmpty {}
 struct AndGuard { AstNode pattern; AstNode sort; AstNode and_guard; }
 struct OrGuardEmpty {}
 struct OrGuard { AstNode guard; }
+
 struct LitteralNumber { string value; }
 struct LitteralDecimal { string whole_number; string decimal_number; }
 struct LitteralWord { string value; }
 struct LitteralString { string value; }
+
 struct PattUnitLitteral { AstNode pattern; }
 struct PattUnitBounded { AstNode pattern; }
+
 struct SortUnitLitteral { AstNode sort; }
 struct SortUnitBounded { AstNode sort; }
+
 struct ROOT { AstNode root; }
 struct TERMINAL {}
 
@@ -293,6 +330,33 @@ void print_ast_node(AstNode node, size_t indentation) {
         case AstType.SortLambda:
             print_ast_node(node.ast.sortLambda.fnBranch, new_indent);
             break;
+        case AstType.SortBinOp:
+            print_ast_node(node.ast.sortBinOp.binOp, new_indent, "BinOp:");
+            print_ast_node(node.ast.sortBinOp.sort_left, new_indent, "Left:");
+            print_ast_node(node.ast.sortBinOp.sort_right, new_indent, "Right:");
+            break;
+
+        case AstType.BinOpPair:
+            write_indent(new_indent);
+            write("Op: Pair\n");
+            break;
+        case AstType.BinOpTuple:
+            write_indent(new_indent);
+            write("Op: Tuple\n");
+            break;
+        case AstType.BinOpRecurse:
+            write_indent(new_indent);
+            write("Op: Recurse\n");
+            break;
+        case AstType.BinOpApply:
+            write_indent(new_indent);
+            write("Op: Apply\n");
+            break;
+        case AstType.BinOpFunction:
+            write_indent(new_indent);
+            write("Op: Function\n");
+            break;
+            /*
         case AstType.SortPair:
             print_ast_node(node.ast.sortPair.sort_left, new_indent, "Left:");
             print_ast_node(node.ast.sortPair.sort_right, new_indent, "Right:");
@@ -313,6 +377,7 @@ void print_ast_node(AstNode node, size_t indentation) {
             print_ast_node(node.ast.sortFunction.sort_left, new_indent, "Left:");
             print_ast_node(node.ast.sortFunction.sort_right, new_indent, "Right:");
             break;
+            */
         case AstType.SortDepBind:
             print_ast_node(node.ast.sortDepBind.sort, new_indent, "Sort:");
             print_ast_node(node.ast.sortDepBind.pattern, new_indent, "Pattern:");
@@ -338,9 +403,10 @@ void print_ast_node(AstNode node, size_t indentation) {
             print_ast_node(node.ast.pattEquality.pattern, new_indent, "Left:");
             print_ast_node(node.ast.pattEquality.pattern_unit, new_indent, "Right:");
             break;
-        case AstType.PattPair:
-            print_ast_node(node.ast.pattPair.patt_left, new_indent, "Left:");
-            print_ast_node(node.ast.pattPair.patt_right, new_indent, "Right:");
+        case AstType.PattBinOp:
+            print_ast_node(node.ast.pattBinOp.binOp, new_indent, "BinOp:");
+            print_ast_node(node.ast.pattBinOp.patt_left, new_indent, "Left:");
+            print_ast_node(node.ast.pattBinOp.patt_right, new_indent, "Right:");
             break;
         case AstType.FnBranchLast:
             print_ast_node(node.ast.fnBranchLast.guard, new_indent, "Guard:");

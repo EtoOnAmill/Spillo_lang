@@ -90,6 +90,12 @@ Token[] lex_spillo(string input) {
             writeln(lexed);
         }
 
+        if( binOps.canFind(lexed.value) ) {
+            Token empty = Token(lexed.pos);
+            empty.tt = TokenType.RESERVED;
+            ret ~= empty;
+        }
+
         idx += lexed.offset();
     }
 
