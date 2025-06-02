@@ -339,28 +339,6 @@ void print_ast_node(AstNode node, size_t indentation) {
             write_indent(new_indent);
             write("Op: Function\n");
             break;
-            /*
-        case AstType.SortPair:
-            print_ast_node(node.ast.sortPair.sort_left, new_indent, "Left:");
-            print_ast_node(node.ast.sortPair.sort_right, new_indent, "Right:");
-            break;
-        case AstType.SortTuple:
-            print_ast_node(node.ast.sortTuple.sort_left, new_indent, "Left:");
-            print_ast_node(node.ast.sortTuple.sort_right, new_indent, "Right:");
-            break;
-        case AstType.SortApply:
-            print_ast_node(node.ast.sortApply.sort_left, new_indent, "Left:");
-            print_ast_node(node.ast.sortApply.sort_right, new_indent, "Right:");
-            break;
-        case AstType.SortRecurse:
-            print_ast_node(node.ast.sortRecurse.sort_left, new_indent, "Left:");
-            print_ast_node(node.ast.sortRecurse.sort_right, new_indent, "Right:");
-            break;
-        case AstType.SortFunction:
-            print_ast_node(node.ast.sortFunction.sort_left, new_indent, "Left:");
-            print_ast_node(node.ast.sortFunction.sort_right, new_indent, "Right:");
-            break;
-            */
         case AstType.SortDepBind:
             print_ast_node(node.ast.sortDepBind.sort, new_indent, "Sort:");
             print_ast_node(node.ast.sortDepBind.pattern, new_indent, "Pattern:");
