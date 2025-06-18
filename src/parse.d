@@ -300,7 +300,7 @@ ParsingTable generate_parsing_table(Grammar g) {
             if(r_metadata.expected_item == GrammarItem.EOF) {
                 table[curr_state_idx].default_action = action;
             } else {
-                table[curr_state_idx].insert_action(r_metadata.expected_item, action);
+                assert(table[curr_state_idx].insert_action(r_metadata.expected_item, action), "Reduce/Reduce Conflict");
             }
         }
 
@@ -331,7 +331,7 @@ ParsingTable generate_parsing_table(Grammar g) {
 
             size_t shift_to_idx = state_to_shift_to(refined_state.productions);
             ParsingAction action = ParsingAction(Action.SHIFT, shift_to_idx);
-            table[curr_state_idx].insert_action(s_metadata.expected_item, action);
+            assert(table[curr_state_idx].insert_action(s_metadata.expected_item, action), "Shift/Reduce Conflict");
 
             if(shift_to_idx == generated_states.length) {
                 generated_states ~= refined_state;
