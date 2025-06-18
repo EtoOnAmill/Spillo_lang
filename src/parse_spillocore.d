@@ -93,26 +93,24 @@ GrammarItems string_to_grammar_item(string s) {
     }
 }
 
-struct AstNode {
+struct ParseAst {
     GrammarItems type;
     AstType ast_type;
-    Ast *ast;
-
-    
+    ParseAstData *ast;
 }
 
-GrammarTinstance.Ast_utils!(AstNode, Token) ast_u = {
+GrammarTinstance.Ast_utils!(ParseAst, Token) ast_u = {
 
     from_token : &from_token,
 
-    to_grammar_item : function GrammarItems(AstNode node) { return node.type; },
+    to_grammar_item : function GrammarItems(ParseAst node) { return node.type; },
 
     reduce : &reduce,
 };
 
-AstNode from_token(Token token) {
-    AstNode ret = AstNode(token_to_grammar_item(token));
-    ret.ast = new Ast();
+ParseAst from_token(Token token) {
+    ParseAst ret = ParseAst(token_to_grammar_item(token));
+    ret.ast = new ParseAstData();
     final switch(token.tt) {
     case TokenType.WORD:
         ret.ast.litteralWord.value = token.value.dup;
@@ -134,18 +132,18 @@ AstNode from_token(Token token) {
     return ret;
 }
 
-AstNode reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, AstNode[] items) {
+ParseAst reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, ParseAst[] items) {
     GrammarItems intermediate = grammar.intermediates[prod_idx];
     AstType ast_type = grammar.production_names[prod_idx];
 
-    AstNode ret;
+    ParseAst ret;
     ret.type = intermediate;
     ret.ast_type = ast_type;
 
-    ret.ast = new Ast();
+    ret.ast = new ParseAstData();
     final switch(ast_type) {
-    case AstType.TERMINAL: assert(0, "illegal reduction: AstType.TERMINAL  in src/parse_spillocorde.d");
-    case AstType.ROOT: assert(0, "illegal reduction: AstType.ROOT  in src/parse_spillocorde.d");
+    case AstType.TERMINAL: assert(0, "illegal reduction: AstType.TERMINAL  in src/parse_spillocore.d");
+    case AstType.ROOT: assert(0, "illegal reduction: AstType.ROOT  in src/parse_spillocore.d");
 
     case AstType.LitteralWord:
     case AstType.LitteralString:
@@ -195,8 +193,8 @@ AstNode reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, AstNode[] item
 }
 
 
-union Ast {
-    AstNode[] items;
+union ParseAstData {
+    ParseAst[] items;
 
     SortLitteral sortLitteral;
     SortLambda sortLambda;
@@ -242,59 +240,59 @@ union Ast {
 
 }
 
-struct SortLitteral { AstNode value; }
-struct SortLambda { AstNode fnBranch; }
-struct SortBinOp { AstNode sort_left; AstNode sort_right; AstNode binOp; } 
-struct SortDepBind { AstNode sort; AstNode pattern; }
-struct SortDepDecl { AstNode sort; AstNode pattern; }
+struct SortLitteral { ParseAst value; }
+struct SortLambda { ParseAst fnBranch; }
+struct SortBinOp { ParseAst sort_left; ParseAst sort_right; ParseAst binOp; } 
+struct SortDepBind { ParseAst sort; ParseAst pattern; }
+struct SortDepDecl { ParseAst sort; ParseAst pattern; }
 
-struct BinOpPair { AstNode value; }
-struct BinOpTuple { AstNode value; }
-struct BinOpFunction { AstNode value; }
-struct BinOpApply { AstNode value; }
-struct BinOpRecurse { AstNode value; }
+struct BinOpPair { ParseAst value; }
+struct BinOpTuple { ParseAst value; }
+struct BinOpFunction { ParseAst value; }
+struct BinOpApply { ParseAst value; }
+struct BinOpRecurse { ParseAst value; }
 
-struct PattTyped { AstNode typeless; AstNode type; }
-struct PattTypeless { AstNode typeless; }
-struct PattLitteral { AstNode value; }
-struct PattAlternative { AstNode sort; }
-struct PattEquality { AstNode pattern; AstNode pattern_unit; }
-struct PattBinOp { AstNode patt_left; AstNode patt_right; AstNode binOp; }
+struct PattTyped { ParseAst typeless; ParseAst type; }
+struct PattTypeless { ParseAst typeless; }
+struct PattLitteral { ParseAst value; }
+struct PattAlternative { ParseAst sort; }
+struct PattEquality { ParseAst pattern; ParseAst pattern_unit; }
+struct PattBinOp { ParseAst patt_left; ParseAst patt_right; ParseAst binOp; }
 
-struct FnBranchLast { AstNode guard; AstNode sort; }
-struct FnBranch { AstNode guard; AstNode sort; AstNode branch; }
+struct FnBranchLast { ParseAst guard; ParseAst sort; }
+struct FnBranch { ParseAst guard; ParseAst sort; ParseAst branch; }
 
-struct Guard { AstNode pattern; AstNode and; AstNode or; }
+struct Guard { ParseAst pattern; ParseAst and; ParseAst or; }
 struct AndGuardEmpty {}
-struct AndGuard { AstNode pattern; AstNode sort; AstNode and_guard; }
+struct AndGuard { ParseAst pattern; ParseAst sort; ParseAst and_guard; }
 struct OrGuardEmpty {}
-struct OrGuard { AstNode guard; }
+struct OrGuard { ParseAst guard; }
 
 struct LitteralNumber { string value; }
-struct LitteralDecimal { string whole_number; string decimal_number; }
+struct LitteralDecimal { string whole; string decimal; }
 struct LitteralWord { string value; }
 struct LitteralString { string value; }
 
-struct PattUnitLitteral { AstNode pattern; }
-struct PattUnitBounded { AstNode pattern; }
+struct PattUnitLitteral { ParseAst pattern; }
+struct PattUnitBounded { ParseAst pattern; }
 
-struct SortUnitLitteral { AstNode sort; }
-struct SortUnitBounded { AstNode sort; }
+struct SortUnitLitteral { ParseAst sort; }
+struct SortUnitBounded { ParseAst sort; }
 
-struct ROOT { AstNode root; }
+struct ROOT { ParseAst root; }
 struct TERMINAL {}
 
 
 void write_indent(size_t indentation) {
     foreach(_;0..indentation) write("| ");
 }
-void print_ast_node(AstNode node, size_t indentation, string title) {
+void print_ast_node(ParseAst node, size_t indentation, string title) {
     write_indent(indentation);
     writeln(title);
     print_ast_node(node, indentation+1);
 }
 
-void print_ast_node(AstNode node, size_t indentation) {
+void print_ast_node(ParseAst node, size_t indentation) {
 
     write_indent(indentation);
     write(node.type.to!string);
@@ -318,7 +316,6 @@ void print_ast_node(AstNode node, size_t indentation) {
             print_ast_node(node.ast.sortBinOp.sort_left, new_indent, "Left:");
             print_ast_node(node.ast.sortBinOp.sort_right, new_indent, "Right:");
             break;
-
         case AstType.BinOpPair:
             write_indent(new_indent);
             write("Op: Pair\n");
@@ -414,9 +411,9 @@ void print_ast_node(AstNode node, size_t indentation) {
         case AstType.LitteralDecimal:
             write_indent(new_indent);
             write("Litteral Decimal : ");
-            write(node.ast.litteralDecimal.whole_number);
+            write(node.ast.litteralDecimal.whole);
             write(".");
-            write(node.ast.litteralDecimal.decimal_number);
+            write(node.ast.litteralDecimal.decimal);
             write("\n");
             break;
         case AstType.PattUnitLitteral:
