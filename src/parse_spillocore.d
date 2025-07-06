@@ -12,8 +12,7 @@ Sort :
     SortLitteral = Litteral ;
     SortBinOp = Sort Sort BinOp EMPTY ;
     SortLambda = With Fnbranch Done ;
-    SortDepBind = Sort Of Of Pattunit ;
-    SortDepDecl = Sort Equal Of Pattunit .
+    SortDepBind = Sort Of Of Pattunit .
 
 BinOp :
     BinOpPair = Pair ;
@@ -171,7 +170,6 @@ ParseAst reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, ParseAst[] it
     case AstType.BinOpFunction: ret.ast.binOpFunction = BinOpFunction(items[0]); break;
 
     case AstType.SortDepBind: ret.ast.sortDepBind = SortDepBind(items[0], items[3]); break;
-    case AstType.SortDepDecl: ret.ast.sortDepDecl = SortDepDecl(items[0], items[3]); break;
 
     case AstType.PattTyped: ret.ast.patt = PattTyped(items[0], items[2]); break;
     case AstType.PattTypeless: ret.ast.pattTypeless = PattTypeless(items[0]); break;
@@ -200,7 +198,6 @@ union ParseAstData {
     SortLambda sortLambda;
     SortBinOp sortBinOp;
     SortDepBind sortDepBind;
-    SortDepDecl sortDepDecl;
 
     BinOpPair binOpPair;
     BinOpTuple binOpTuple;
@@ -242,9 +239,8 @@ union ParseAstData {
 
 struct SortLitteral { ParseAst value; }
 struct SortLambda { ParseAst fnBranch; }
-struct SortBinOp { ParseAst sort_left; ParseAst sort_right; ParseAst binOp; } 
+struct SortBinOp { ParseAst left; ParseAst right; ParseAst binOp; } 
 struct SortDepBind { ParseAst sort; ParseAst pattern; }
-struct SortDepDecl { ParseAst sort; ParseAst pattern; }
 
 struct BinOpPair { ParseAst value; }
 struct BinOpTuple { ParseAst value; }
@@ -257,7 +253,7 @@ struct PattTypeless { ParseAst typeless; }
 struct PattLitteral { ParseAst value; }
 struct PattAlternative { ParseAst sort; }
 struct PattEquality { ParseAst pattern; ParseAst pattern_unit; }
-struct PattBinOp { ParseAst patt_left; ParseAst patt_right; ParseAst binOp; }
+struct PattBinOp { ParseAst left; ParseAst right; ParseAst binOp; }
 
 struct FnBranchLast { ParseAst guard; ParseAst sort; }
 struct FnBranch { ParseAst guard; ParseAst sort; ParseAst branch; }
@@ -313,8 +309,8 @@ void print_ast_node(ParseAst node, size_t indentation) {
             break;
         case AstType.SortBinOp:
             print_ast_node(node.ast.sortBinOp.binOp, new_indent, "BinOp:");
-            print_ast_node(node.ast.sortBinOp.sort_left, new_indent, "Left:");
-            print_ast_node(node.ast.sortBinOp.sort_right, new_indent, "Right:");
+            print_ast_node(node.ast.sortBinOp.left, new_indent, "Left:");
+            print_ast_node(node.ast.sortBinOp.right, new_indent, "Right:");
             break;
         case AstType.BinOpPair:
             write_indent(new_indent);
@@ -340,10 +336,6 @@ void print_ast_node(ParseAst node, size_t indentation) {
             print_ast_node(node.ast.sortDepBind.sort, new_indent, "Sort:");
             print_ast_node(node.ast.sortDepBind.pattern, new_indent, "Pattern:");
             break;
-        case AstType.SortDepDecl:
-            print_ast_node(node.ast.sortDepBind.sort, new_indent, "Sort:");
-            print_ast_node(node.ast.sortDepBind.pattern, new_indent, "Pattern:");
-            break;
         case AstType.PattTypeless:
             print_ast_node(node.ast.pattTypeless.typeless, new_indent);
             break;
@@ -363,8 +355,8 @@ void print_ast_node(ParseAst node, size_t indentation) {
             break;
         case AstType.PattBinOp:
             print_ast_node(node.ast.pattBinOp.binOp, new_indent, "BinOp:");
-            print_ast_node(node.ast.pattBinOp.patt_left, new_indent, "Left:");
-            print_ast_node(node.ast.pattBinOp.patt_right, new_indent, "Right:");
+            print_ast_node(node.ast.pattBinOp.left, new_indent, "Left:");
+            print_ast_node(node.ast.pattBinOp.right, new_indent, "Right:");
             break;
         case AstType.FnBranchLast:
             print_ast_node(node.ast.fnBranchLast.guard, new_indent, "Guard:");

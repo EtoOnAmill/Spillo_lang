@@ -34,51 +34,114 @@ SemanticAst convert(ParseAst parse_ast) {
             ret.sort.tag = SortTag.Litteral;
             ret.sort.litteral = convert(parse_ast.ast.sortLitteral.value).litteral;
             break;
-        case AstType.SortUnitLitteral: break;
+        case AstType.SortUnitLitteral:
             ret.tag = AstTag.Sort;
             ret.sort.tag = SortTag.Litteral;
             ret.sort.litteral = convert(parse_ast.ast.sortUnitLitteral.sort).litteral;
             break;
-        case AstType.SortUnitBounded: break;
+        case AstType.SortUnitBounded:
             ret = convert(parse_ast.ast.sortUnitBounded.sort);
             break;
-        case AstType.SortLambda: break;
-        case AstType.SortBinOp: break;
-        case AstType.SortDepBind: break;
-        case AstType.SortDepDecl: break;
+        case AstType.SortBinOp:
+            SortBinOp sbo = parse_ast.ast.sortBinOp;
+            ret.tag = AstTag.Sort;
+            ret.sort.tag = SortTag.BinOp;
+            ret.sort.bin_op.left = convert(sbo.left).sort;
+            ret.sort.bin_op.right = convert(sbo.right).sort;
+            ret.sort.bin_op.operator = convert(sbo.binOp).litteral.sort_bin_op;
+            break;
+        case AstType.SortDepBind:
+            SortDepBind sdb = parse_ast.ast.sortDepBind;
+            ret.tag = AstTag.Sort;
+            ret.sort.tag = SortTag.BinOp;
+            ret.sort.depBind.sort = convert(sdb.sort).sort;
+            ret.sort.depBind.pattern = convert(sdb.pattern).pattern;
+            break;
+        case AstType.SortLambda:
+            assert(0, "Lambdas not yet implemented");
+            break;
 
-        case AstType.BinOpPair: break;
-        case AstType.BinOpTuple: break;
-        case AstType.BinOpRecurse: break;
-        case AstType.BinOpApply: break;
-        case AstType.BinOpFunction: break;
+        case AstType.BinOpPair:
+            ret.tag = AstTag.Litteral;
+            ret.litteral.tag = LitteralTag.BinOp;
+            ret.litteral.sort_bin_op = SortBinOperator.Pair;
+            break;
+        case AstType.BinOpTuple:
+            ret.tag = AstTag.Litteral;
+            ret.litteral.tag = LitteralTag.BinOp;
+            ret.litteral.sort_bin_op = SortBinOperator.Tuple;
+            break;
+        case AstType.BinOpRecurse:
+            ret.tag = AstTag.Litteral;
+            ret.litteral.tag = LitteralTag.BinOp;
+            ret.litteral.sort_bin_op = SortBinOperator.Recurse;
+            break;
+        case AstType.BinOpApply:
+            ret.tag = AstTag.Litteral;
+            ret.litteral.tag = LitteralTag.BinOp;
+            ret.litteral.sort_bin_op = SortBinOperator.Apply;
+            break;
+        case AstType.BinOpFunction:
+            ret.tag = AstTag.Litteral;
+            ret.litteral.tag = LitteralTag.BinOp;
+            ret.litteral.sort_bin_op = SortBinOperator.Function;
+            break;
 
         case AstType.PattLitteral:
             ret.tag = AstTag.Pattern;
-            ret.pattern.tag = PatternTag.Litteral;
+            ret.pattern.tag = PattTag.Litteral;
             ret.pattern.litteral = convert(parse_ast.ast.pattLitteral.value).litteral;
             break;
-        case AstType.PattUnitLitteral: break;
+        case AstType.PattUnitLitteral:
             ret.tag = AstTag.Pattern;
-            ret.pattern.tag = PatternTag.Litteral;
+            ret.pattern.tag = PattTag.Litteral;
             ret.pattern.litteral = convert(parse_ast.ast.pattUnitLitteral.pattern).litteral;
             break;
-        case AstType.PattUnitBounded: break;
+        case AstType.PattUnitBounded:
             ret = convert(parse_ast.ast.pattUnitBounded.pattern);
             break;
-        case AstType.PattTyped: break;
-        case AstType.PattTypeless: break;
-        case AstType.PattAlternative: break;
-        case AstType.PattEquality: break;
-        case AstType.PattBinOp: break;
+        case AstType.PattBinOp:
+            PattBinOp pbo = parse_ast.ast.pattBinOp;
+            ret.tag = AstTag.Pattern;
+            ret.pattern.tag = PattTag.BinOp;
+            ret.pattern.bin_op.left = convert(pbo.left).pattern;
+            ret.pattern.bin_op.right = convert(pbo.right).pattern;
+            ret.pattern.bin_op.operator = convert(pbo.binOp).litteral.patt_bin_op;
+            break;
+        case AstType.PattTyped:
+            PattTyped pt = parse_ast.ast.patt;
+            break;
+        case AstType.PattTypeless:
+            assert(0, "PattTypeless not yet implemented");
+            break;
+        case AstType.PattAlternative:
+            assert(0, "PattAlternative not yet implemented");
+            break;
+        case AstType.PattEquality:
+            assert(0, "PattEquality not yet implemented");
+            break;
 
-        case AstType.FnBranchLast: break;
-        case AstType.FnBranch: break;
-        case AstType.Guard: break;
-        case AstType.AndGuard: break;
-        case AstType.OrGuard: break;
-        case AstType.AndGuardEmpty: break;
-        case AstType.OrGuardEmpty: break;
+        case AstType.FnBranchLast:
+            assert(0, "FnBranchLast not yet implemented");
+            break;
+        case AstType.FnBranch:
+            assert(0, "FnBranch not yet implemented");
+            break;
+        case AstType.Guard:
+            assert(0, "Guard not yet implemented");
+            break;
+        case AstType.AndGuard:
+            assert(0, "AndGuard not yet implemented");
+            break;
+        case AstType.OrGuard:
+            assert(0, "OrGuard not yet implemented");
+            break;
+        case AstType.AndGuardEmpty:
+            assert(0, "AndGuardEmpty not yet implemented");
+            break;
+        case AstType.OrGuardEmpty:
+            assert(0, "OrGuardEmpty not yet implemented");
+            break;
     }
     return ret;
 }
@@ -96,6 +159,58 @@ struct SemanticAst {
 }
 
 
+string format_semantic_ast(SemanticAst ast) {
+    string ret;
+    return ret;
+}
+string format_semantic_sort(S_Sort sort) {
+    string ret;
+    return ret;
+}
+string format_semantic_pattern(S_Pattern pattern) {
+    string ret;
+    final switch(pattern.tag) {
+
+        case PattTag.Litteral:
+            return format_semantic_litteral(pattern.litteral);
+        case PattTag.BinOp:
+            final switch(pattern.bin_op.operator) {
+                case PattBinOperator.Pair:
+                    ret = format_semantic_pattern(pattern.bin_op.left);
+                    ret ~= ' ';
+                    ret ~= format_semantic_pattern(pattern.bin_op.right);
+                    ret ~= '/';
+                    break;
+                case PattBinOperator.Equality:
+                    ret = format_semantic_pattern(pattern.bin_op.left);
+                    ret ~= "=(";
+                    ret ~= format_semantic_pattern(pattern.bin_op.right);
+                    ret ~= ')';
+                    break;
+            }
+            break;
+        case PattTag.Sort:
+            ret = "~(";
+            ret ~= format_semantic_sort(pattern.alt_pattern);
+            ret ~= ')';
+            break;
+    }
+    return ret;
+}
+string format_semantic_litteral(S_Litteral litteral) {
+    final switch(litteral.tag) {
+        case LitteralTag.Word:
+            return litteral.word;
+        case LitteralTag.String:
+            return litteral.lstring;
+        case LitteralTag.Number:
+            return litteral.number;
+        case LitteralTag.Decimal:
+            return litteral.whole ~ '.' ~  litteral.decimal;
+        case LitteralTag.BinOp: assert(0, "Imposssible to print litteral binop: lacking context (pattern|sort)");
+    }
+}
+
 
 /*
 Sort :
@@ -103,16 +218,14 @@ Sort :
     SortBinOp = Sort Sort BinOp EMPTY ;
     SortLambda = With Fnbranch Done ;
     SortDepBind = Sort Of Of Pattunit ;
-    SortDepDecl = Sort Equal Of Pattunit .
 */
-enum SortTag { Litteral, BinOp, DepBind, DepDecl, Lambda, }
+enum SortTag { Litteral, BinOp, DepBind, Lambda, }
 struct S_Sort {
     SortTag tag;
     union {
         S_Litteral litteral;
-        S_SortBinOp *binOp;
+        S_SortBinOp *bin_op;
         S_PattSort *depBind;
-        S_PattSort *depDecl;
         S_Lambda *lambda;
     }
     S_Sort *type;
@@ -128,15 +241,15 @@ BinOp :
     BinOpApply = Apply ;
     BinOpRecurse = Recurse .
 */
-enum SortBinOpOperator { Pair, Tuple, Function, Apply, Recurse, }
+enum SortBinOperator { Pair, Tuple, Function, Apply, Recurse, }
 struct S_SortBinOp {
-    SortBinOpOperator operator;
+    SortBinOperator operator;
     S_Sort left;
     S_Sort right;
 }
-enum PatternBinOperator { Pair, Equality, }
+enum PattBinOperator { Pair, Equality, }
 struct S_PatternBinOp {
-    PatternBinOperator tag;
+    PattBinOperator operator;
     S_Pattern left;
     S_Pattern right;
 }
@@ -187,12 +300,12 @@ Typelesspatt :
     PattEquality = Patt Equal Pattunit ;
     PattBinOp = Patt Patt BinOp EMPTY .
 */
-enum PatternTag { Litteral, BinOp, Sort, }
+enum PattTag { Litteral, BinOp, Sort, }
 struct S_Pattern {
-    PatternTag tag;
+    PattTag tag;
     union {
         S_Litteral litteral;
-        S_PatternBinOp *binOp;
+        S_PatternBinOp *bin_op;
         S_Sort alt_pattern;
     }
     S_Sort *type;
@@ -207,7 +320,7 @@ Litteral :
     LitteralWord = WORD ;
     LitteralString = STR .
 */
-enum LitteralTag { Word, String, Number, Decimal, }
+enum LitteralTag { Word, String, Number, Decimal, BinOp }
 struct S_Litteral {
     LitteralTag tag;
     union {
@@ -217,6 +330,8 @@ struct S_Litteral {
         struct {
             string whole;
             string decimal;
-        } 
+        }
+        SortBinOperator sort_bin_op;
+        PattBinOperator patt_bin_op;
     }
 }
