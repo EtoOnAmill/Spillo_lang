@@ -104,21 +104,31 @@ SemanticAst convert(ParseAst parse_ast) {
             PattBinOp pbo = parse_ast.ast.pattBinOp;
             ret.tag = AstTag.Pattern;
             ret.pattern.tag = PattTag.BinOp;
+            ret.pattern.bin_op = new S_PatternBinOp;
             ret.pattern.bin_op.left = convert(pbo.left).pattern;
             ret.pattern.bin_op.right = convert(pbo.right).pattern;
             ret.pattern.bin_op.operator = convert(pbo.binOp).litteral.patt_bin_op;
             break;
-        case AstType.PattTyped:
-            PattTyped pt = parse_ast.ast.patt;
-            break;
-        case AstType.PattTypeless:
-            assert(0, "PattTypeless not yet implemented");
+        case AstType.PattEquality:
+            PattEquality peq = parse_ast.ast.pattEquality;
+            ret.tag = AstTag.Pattern;
+            ret.pattern.tag = PattTag.BinOp;
+            ret.pattern.bin_op = new S_PatternBinOp;
+            ret.pattern.bin_op.left = convert(peq.pattern).pattern;
+            ret.pattern.bin_op.right = convert(peq.pattern_unit).pattern;
+            ret.pattern.bin_op.operator = PattBinOperator.Equality;
             break;
         case AstType.PattAlternative:
+            ret.tag = AstTag.Pattern;
+            ret.pattern.tag = PattTag.Sort;
+            ret.pattern.sort = convert(parse_ast.ast.pattAlternative.sort).sort;
             assert(0, "PattAlternative not yet implemented");
             break;
-        case AstType.PattEquality:
-            assert(0, "PattEquality not yet implemented");
+        case AstType.PattTyped:
+            // all three typeless pattern variants convert to a S_Pattern with a null type, this flattens the structure 
+            ret.pattern = convert(parse_ast.ast.patt.typeless).pattern;
+            ret.pattern.type = new S_Sort;
+            *ret.pattern.type = convert(parse_ast.ast.patt.type).sort;
             break;
 
         case AstType.FnBranchLast:
@@ -159,59 +169,6 @@ struct SemanticAst {
 }
 
 
-string format_semantic_ast(SemanticAst ast) {
-    string ret;
-    return ret;
-}
-string format_semantic_sort(S_Sort sort) {
-    string ret;
-    return ret;
-}
-string format_semantic_pattern(S_Pattern pattern) {
-    string ret;
-    final switch(pattern.tag) {
-
-        case PattTag.Litteral:
-            return format_semantic_litteral(pattern.litteral);
-        case PattTag.BinOp:
-            final switch(pattern.bin_op.operator) {
-                case PattBinOperator.Pair:
-                    ret = format_semantic_pattern(pattern.bin_op.left);
-                    ret ~= ' ';
-                    ret ~= format_semantic_pattern(pattern.bin_op.right);
-                    ret ~= '/';
-                    break;
-                case PattBinOperator.Equality:
-                    ret = format_semantic_pattern(pattern.bin_op.left);
-                    ret ~= "=(";
-                    ret ~= format_semantic_pattern(pattern.bin_op.right);
-                    ret ~= ')';
-                    break;
-            }
-            break;
-        case PattTag.Sort:
-            ret = "~(";
-            ret ~= format_semantic_sort(pattern.alt_pattern);
-            ret ~= ')';
-            break;
-    }
-    return ret;
-}
-string format_semantic_litteral(S_Litteral litteral) {
-    final switch(litteral.tag) {
-        case LitteralTag.Word:
-            return litteral.word;
-        case LitteralTag.String:
-            return litteral.lstring;
-        case LitteralTag.Number:
-            return litteral.number;
-        case LitteralTag.Decimal:
-            return litteral.whole ~ '.' ~  litteral.decimal;
-        case LitteralTag.BinOp: assert(0, "Imposssible to print litteral binop: lacking context (pattern|sort)");
-    }
-}
-
-
 /*
 Sort :
     SortLitteral = Litteral ;
@@ -232,6 +189,50 @@ struct S_Sort {
 }
 
 
+/*
+Patt :
+    PattTyped = Typelesspatt Of Sortunit .
+Typelesspatt :
+    PattLitteral = Litteral ;
+    PattAlternative = Alt Sortunit ;
+    PattEquality = Patt Equal Pattunit ;
+    PattBinOp = Patt Patt BinOp EMPTY .
+*/
+enum PattTag { Litteral, BinOp, Sort, }
+struct S_Pattern {
+    PattTag tag;
+    union {
+        S_Litteral litteral;
+        S_PatternBinOp *bin_op;
+        S_Sort sort;
+    }
+    S_Sort *type;
+}
+
+
+
+/*
+Litteral : 
+    LitteralNumber = NUM ;
+    LitteralDecimal = NUM Dot NUM ;
+    LitteralWord = WORD ;
+    LitteralString = STR .
+*/
+enum LitteralTag { Word, String, Number, Decimal, BinOp }
+struct S_Litteral {
+    LitteralTag tag;
+    union {
+        string word;
+        string lstring;
+        string number;
+        struct {
+            string whole;
+            string decimal;
+        }
+        SortBinOperator sort_bin_op;
+        PattBinOperator patt_bin_op;
+    }
+}
 
 /*
 BinOp :
@@ -290,48 +291,56 @@ struct S_PattSort {
 
 
 
-/*
-Patt :
-    PattTypeless = Typelesspatt ;
-    PattTyped = Typelesspatt Of Sortunit .
-Typelesspatt :
-    PattLitteral = Litteral ;
-    PattAlternative = Alt Sortunit ;
-    PattEquality = Patt Equal Pattunit ;
-    PattBinOp = Patt Patt BinOp EMPTY .
-*/
-enum PattTag { Litteral, BinOp, Sort, }
-struct S_Pattern {
-    PattTag tag;
-    union {
-        S_Litteral litteral;
-        S_PatternBinOp *bin_op;
-        S_Sort alt_pattern;
+
+string format_semantic_ast(SemanticAst ast) {
+    string ret;
+    return ret;
+}
+string format_semantic_sort(S_Sort sort) {
+    string ret;
+    return ret;
+}
+string format_semantic_pattern(S_Pattern pattern) {
+    string ret;
+    final switch(pattern.tag) {
+
+        case PattTag.Litteral:
+            return format_semantic_litteral(pattern.litteral);
+        case PattTag.BinOp:
+            final switch(pattern.bin_op.operator) {
+                case PattBinOperator.Pair:
+                    ret = format_semantic_pattern(pattern.bin_op.left);
+                    ret ~= ' ';
+                    ret ~= format_semantic_pattern(pattern.bin_op.right);
+                    ret ~= '/';
+                    break;
+                case PattBinOperator.Equality:
+                    ret = format_semantic_pattern(pattern.bin_op.left);
+                    ret ~= "=(";
+                    ret ~= format_semantic_pattern(pattern.bin_op.right);
+                    ret ~= ')';
+                    break;
+            }
+            break;
+        case PattTag.Sort:
+            ret = "~(";
+            ret ~= format_semantic_sort(pattern.sort);
+            ret ~= ')';
+            break;
     }
-    S_Sort *type;
+    return ret;
+}
+string format_semantic_litteral(S_Litteral litteral) {
+    final switch(litteral.tag) {
+        case LitteralTag.Word:
+            return litteral.word;
+        case LitteralTag.String:
+            return litteral.lstring;
+        case LitteralTag.Number:
+            return litteral.number;
+        case LitteralTag.Decimal:
+            return litteral.whole ~ '.' ~  litteral.decimal;
+        case LitteralTag.BinOp: assert(0, "Imposssible to print litteral binop: lacking context (pattern|sort)");
+    }
 }
 
-
-
-/*
-Litteral : 
-    LitteralNumber = NUM ;
-    LitteralDecimal = NUM Dot NUM ;
-    LitteralWord = WORD ;
-    LitteralString = STR .
-*/
-enum LitteralTag { Word, String, Number, Decimal, BinOp }
-struct S_Litteral {
-    LitteralTag tag;
-    union {
-        string word;
-        string lstring;
-        string number;
-        struct {
-            string whole;
-            string decimal;
-        }
-        SortBinOperator sort_bin_op;
-        PattBinOperator patt_bin_op;
-    }
-}

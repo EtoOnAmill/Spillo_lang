@@ -22,7 +22,6 @@ BinOp :
     BinOpRecurse = Recurse .
 
 Patt :
-    PattTypeless = Typelesspatt ;
     PattTyped = Typelesspatt Of Sortunit .
 Typelesspatt :
     PattLitteral = Litteral ;
@@ -172,7 +171,6 @@ ParseAst reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, ParseAst[] it
     case AstType.SortDepBind: ret.ast.sortDepBind = SortDepBind(items[0], items[3]); break;
 
     case AstType.PattTyped: ret.ast.patt = PattTyped(items[0], items[2]); break;
-    case AstType.PattTypeless: ret.ast.pattTypeless = PattTypeless(items[0]); break;
     case AstType.PattAlternative: ret.ast.pattAlternative = PattAlternative(items[1]); break;
     case AstType.PattEquality: ret.ast.pattEquality = PattEquality(items[0], items[2]); break;
     case AstType.PattBinOp: ret.ast.pattBinOp = PattBinOp(items[0], items[1], items[2]); break;
@@ -206,7 +204,6 @@ union ParseAstData {
     BinOpRecurse binOpRecurse;
 
     PattTyped patt;
-    PattTypeless pattTypeless;
     PattLitteral pattLitteral;
     PattAlternative pattAlternative;
     PattEquality pattEquality;
@@ -249,7 +246,6 @@ struct BinOpApply { ParseAst value; }
 struct BinOpRecurse { ParseAst value; }
 
 struct PattTyped { ParseAst typeless; ParseAst type; }
-struct PattTypeless { ParseAst typeless; }
 struct PattLitteral { ParseAst value; }
 struct PattAlternative { ParseAst sort; }
 struct PattEquality { ParseAst pattern; ParseAst pattern_unit; }
@@ -335,9 +331,6 @@ void print_ast_node(ParseAst node, size_t indentation) {
         case AstType.SortDepBind:
             print_ast_node(node.ast.sortDepBind.sort, new_indent, "Sort:");
             print_ast_node(node.ast.sortDepBind.pattern, new_indent, "Pattern:");
-            break;
-        case AstType.PattTypeless:
-            print_ast_node(node.ast.pattTypeless.typeless, new_indent);
             break;
         case AstType.PattTyped:
             print_ast_node(node.ast.patt.typeless, new_indent, "Typeless:");
