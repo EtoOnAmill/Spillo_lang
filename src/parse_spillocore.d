@@ -22,7 +22,8 @@ BinOp :
     BinOpRecurse = Recurse .
 
 Patt :
-    PattTyped = Typelesspatt Of Sortunit .
+    PattTypeless = Typelesspatt ;
+    PattId = WORD Of Sortunit .
 Typelesspatt :
     PattLitteral = Litteral ;
     PattAlternative = Alt Sortunit ;
@@ -170,7 +171,8 @@ ParseAst reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, ParseAst[] it
 
     case AstType.SortDepBind: ret.ast.sortDepBind = SortDepBind(items[0], items[3]); break;
 
-    case AstType.PattTyped: ret.ast.patt = PattTyped(items[0], items[2]); break;
+    case AstType.PattId: ret.ast.pattId = PattId(items[0], items[2]); break;
+    case AstType.PattTypeless: ret.ast.pattTypeless = PattTypeless(items[0]); break;
     case AstType.PattAlternative: ret.ast.pattAlternative = PattAlternative(items[1]); break;
     case AstType.PattEquality: ret.ast.pattEquality = PattEquality(items[0], items[2]); break;
     case AstType.PattBinOp: ret.ast.pattBinOp = PattBinOp(items[0], items[1], items[2]); break;
@@ -203,7 +205,8 @@ union ParseAstData {
     BinOpApply binOpApply;
     BinOpRecurse binOpRecurse;
 
-    PattTyped patt;
+    PattId pattId;
+    PattTypeless pattTypeless;
     PattLitteral pattLitteral;
     PattAlternative pattAlternative;
     PattEquality pattEquality;
@@ -245,7 +248,8 @@ struct BinOpFunction { ParseAst value; }
 struct BinOpApply { ParseAst value; }
 struct BinOpRecurse { ParseAst value; }
 
-struct PattTyped { ParseAst typeless; ParseAst type; }
+struct PattId { ParseAst id; ParseAst type; }
+struct PattTypeless { ParseAst patt; }
 struct PattLitteral { ParseAst value; }
 struct PattAlternative { ParseAst sort; }
 struct PattEquality { ParseAst pattern; ParseAst pattern_unit; }
@@ -332,9 +336,12 @@ void print_ast_node(ParseAst node, size_t indentation) {
             print_ast_node(node.ast.sortDepBind.sort, new_indent, "Sort:");
             print_ast_node(node.ast.sortDepBind.pattern, new_indent, "Pattern:");
             break;
-        case AstType.PattTyped:
-            print_ast_node(node.ast.patt.typeless, new_indent, "Typeless:");
-            print_ast_node(node.ast.patt.type, new_indent, "Type:");
+        case AstType.PattId:
+            print_ast_node(node.ast.pattId.id, new_indent, "Id:");
+            print_ast_node(node.ast.pattId.type, new_indent, "Type:");
+            break;
+        case AstType.PattTypeless:
+            print_ast_node(node.ast.pattTypeless.patt, new_indent, "Patt: ");
             break;
         case AstType.PattLitteral:
             print_ast_node(node.ast.pattLitteral.value, new_indent);

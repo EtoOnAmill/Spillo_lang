@@ -124,11 +124,15 @@ SemanticAst convert(ParseAst parse_ast) {
             ret.pattern.sort = convert(parse_ast.ast.pattAlternative.sort).sort;
             assert(0, "PattAlternative not yet implemented");
             break;
-        case AstType.PattTyped:
-            // all three typeless pattern variants convert to a S_Pattern with a null type, this flattens the structure 
-            ret.pattern = convert(parse_ast.ast.patt.typeless).pattern;
+        case AstType.PattId:
+            ret.tag = AstTag.Pattern;
+            ret.pattern.litteral = convert(parse_ast.ast.pattId.id).litteral;
             ret.pattern.type = new S_Sort;
-            *ret.pattern.type = convert(parse_ast.ast.patt.type).sort;
+            *ret.pattern.type = convert(parse_ast.ast.pattId.type).sort;
+            break;
+        case AstType.PattTypeless:
+            // all three typeless pattern variants convert to a S_Pattern with a null type, this flattens the structure 
+            ret = convert(parse_ast.ast.pattTypeless.patt);
             break;
 
         case AstType.FnBranchLast:
@@ -191,7 +195,8 @@ struct S_Sort {
 
 /*
 Patt :
-    PattTyped = Typelesspatt Of Sortunit .
+    PattTypeless = Typelesspatt : 
+    PattId = WORD Of Sortunit .
 Typelesspatt :
     PattLitteral = Litteral ;
     PattAlternative = Alt Sortunit ;
