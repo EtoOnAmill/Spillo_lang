@@ -46,6 +46,7 @@ SemanticAst convert(ParseAst parse_ast) {
             SortBinOp sbo = parse_ast.ast.sortBinOp;
             ret.tag = AstTag.Sort;
             ret.sort.tag = SortTag.BinOp;
+            ret.sort.bin_op = new S_SortBinOp();
             ret.sort.bin_op.left = convert(sbo.left).sort;
             ret.sort.bin_op.right = convert(sbo.right).sort;
             ret.sort.bin_op.operator = convert(sbo.binOp).litteral.sort_bin_op;
@@ -53,12 +54,57 @@ SemanticAst convert(ParseAst parse_ast) {
         case AstType.SortDepBind:
             SortDepBind sdb = parse_ast.ast.sortDepBind;
             ret.tag = AstTag.Sort;
-            ret.sort.tag = SortTag.BinOp;
+            ret.sort.tag = SortTag.DepBind;
+            ret.sort.depBind = new S_PattSort();
             ret.sort.depBind.sort = convert(sdb.sort).sort;
             ret.sort.depBind.pattern = convert(sdb.pattern).pattern;
             break;
         case AstType.SortLambda:
-            assert(0, "Lambdas not yet implemented");
+            ret.tag = AstTag.Sort;
+            ret.sort.tag = SortTag.Lambda;
+
+            S_Branch[] branches;
+
+            ParseAst curr_branch;
+            while( true ) {
+                S_Guard[] or_guards;
+
+                ParseAst curr_or = curr_branch.ast.fnBranch.guard;
+                while( curr_or.type == GrammarItems.Orguard ) {
+                    S_PattSort[] and_guards;
+
+                    ParseAst curr_and = curr_or.ast.guard.and;
+                    while ( curr_and.type == GrammarItems.Andguard ) {
+                        S_Pattern and_patt = convert(curr_and.ast.andGuard.pattern).pattern;
+                        S_Sort sort = convert(curr_and.ast.andGuard.sort).sort;
+
+                        and_guards ~= S_PattSort(and_patt, sort);
+
+                        curr_and = curr_and.ast.andGuard.and_guard;
+                    }
+
+                    S_Pattern or_patt = convert(curr_or.ast.guard.pattern).pattern;
+
+                    or_guards ~= S_Guard(or_patt, and_guards);
+
+                    // the ParseAst OrGuard is just a semantic separation of the base case (Patt And Or) and the looping (or Guard)
+                    curr_or = curr_or.ast.guard.or.ast.orGuard.guard;
+                }
+
+                S_Sort branch_sort = convert(curr_branch.ast.fnBranch.sort).sort;
+
+                branches ~= S_Branch(or_guards, branch_sort);
+
+                curr_branch = curr_branch.ast.fnBranch.branch;
+
+                branches ~= S_Branch(or_guards, branch_sort);
+
+                if ( curr_branch.type == GrammarItems.Fnbranch) {
+                    curr_branch = curr_branch.ast.fnBranch.branch;
+                } else { break; }
+            }
+
+            ret.sort.lambda = new S_Lambda(branches);
             break;
 
         case AstType.BinOpPair:
@@ -122,7 +168,6 @@ SemanticAst convert(ParseAst parse_ast) {
             ret.tag = AstTag.Pattern;
             ret.pattern.tag = PattTag.Sort;
             ret.pattern.sort = convert(parse_ast.ast.pattAlternative.sort).sort;
-            assert(0, "PattAlternative not yet implemented");
             break;
         case AstType.PattId:
             ret.tag = AstTag.Pattern;
