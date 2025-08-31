@@ -99,8 +99,13 @@ struct ParsingTableLine {
     ParsingAction default_action = ParsingAction(Action.REFUTE, 0);
 
     bool insert_action(GrammarItem expected_item, ParsingAction action) {
-        if(this.expected_items.canFind(expected_item)) {
+        size_t item_idx = this.expected_items.countUntil(expected_item) ;
+        if(item_idx < this.expected_items.length && this.actions[item_idx] != action) {
+            this.expected_items ~= expected_item;
+            this.actions ~= action;
             return false;
+        } else if(item_idx < this.expected_items.length && this.actions[item_idx] == action) {
+            return true;
         } else {
             this.expected_items ~= expected_item;
             this.actions ~= action;
@@ -258,6 +263,7 @@ ParsingTable generate_parsing_table(Grammar g) {
     for(size_t curr_state_idx = 0; curr_state_idx < generated_states.length; curr_state_idx++) {
         writeln(curr_state_idx);
         State curr_state = generated_states[curr_state_idx];
+        foreach(curr_line; curr_state.productions) { g.print_state_line(curr_line); }
 
         for(size_t idx = 0; idx < curr_state.metadatas.length; idx++) {
             StateLineMetadata metadata = curr_state.metadatas[idx];
@@ -268,6 +274,7 @@ ParsingTable generate_parsing_table(Grammar g) {
             foreach(prod_idx; prod_idxes) {
                 StateLine prod = StateLine(0, prod_idx, new_lookahead(g, state_line)); 
                 if(!curr_state.productions.canFind(prod)) {
+                    g.print_state_line(prod);
                     curr_state.productions ~= prod;
                     curr_state.metadatas ~= calculate_metadata(g, prod);
                 }
@@ -300,7 +307,10 @@ ParsingTable generate_parsing_table(Grammar g) {
             if(r_metadata.expected_item == GrammarItem.EOF) {
                 table[curr_state_idx].default_action = action;
             } else {
-                assert(table[curr_state_idx].insert_action(r_metadata.expected_item, action), "Reduce/Reduce Conflict");
+                if (!table[curr_state_idx].insert_action(r_metadata.expected_item, action)) {
+                    table[curr_state_idx].print();
+                    assert(0, "Reduce/Reduce Conflict");
+                }
             }
         }
 
@@ -338,7 +348,7 @@ ParsingTable generate_parsing_table(Grammar g) {
             }
         }
 
-        foreach(curr_line; curr_state.productions) { g.print_state_line(curr_line); }
+        
         table[curr_state_idx].print();
     }
 
