@@ -49,7 +49,24 @@ SemanticAst convert(ParseAst parse_ast) {
             ret.sort.bin_op = new S_SortBinOp();
             ret.sort.bin_op.left = convert(sbo.left).sort;
             ret.sort.bin_op.right = convert(sbo.right).sort;
-            ret.sort.bin_op.operator = convert(sbo.binOp).litteral.sort_bin_op;
+            switch( sbo.binOp.ast_type ) {
+                case AstType.BinOpPair:
+                    ret.sort.bin_op.operator = SortBinOperator.Pair;
+                    break;
+                case AstType.BinOpTuple:
+                    ret.sort.bin_op.operator = SortBinOperator.Tuple;
+                    break;
+                case AstType.BinOpRecurse:
+                    ret.sort.bin_op.operator = SortBinOperator.Recurse;
+                    break;
+                case AstType.BinOpApply:
+                    ret.sort.bin_op.operator = SortBinOperator.Apply;
+                    break;
+                case AstType.BinOpFunction:
+                    ret.sort.bin_op.operator = SortBinOperator.Function;
+                    break;
+                default : assert(0,"Binop type expected");
+            }
             break;
         case AstType.SortDepBind:
             SortDepBind sdb = parse_ast.ast.sortDepBind;
@@ -108,29 +125,19 @@ SemanticAst convert(ParseAst parse_ast) {
             break;
 
         case AstType.BinOpPair:
-            ret.tag = AstTag.Litteral;
-            ret.litteral.tag = LitteralTag.BinOp;
-            ret.litteral.sort_bin_op = SortBinOperator.Pair;
+            assert(0, "BinOpPair conversion not to be implemented");
             break;
         case AstType.BinOpTuple:
-            ret.tag = AstTag.Litteral;
-            ret.litteral.tag = LitteralTag.BinOp;
-            ret.litteral.sort_bin_op = SortBinOperator.Tuple;
+            assert(0, "BinOpTuple conversion not to be implemented");
             break;
         case AstType.BinOpRecurse:
-            ret.tag = AstTag.Litteral;
-            ret.litteral.tag = LitteralTag.BinOp;
-            ret.litteral.sort_bin_op = SortBinOperator.Recurse;
+            assert(0, "BinOpRecurse conversion not to be implemented");
             break;
         case AstType.BinOpApply:
-            ret.tag = AstTag.Litteral;
-            ret.litteral.tag = LitteralTag.BinOp;
-            ret.litteral.sort_bin_op = SortBinOperator.Apply;
+            assert(0, "BinOpApply conversion not to be implemented");
             break;
         case AstType.BinOpFunction:
-            ret.tag = AstTag.Litteral;
-            ret.litteral.tag = LitteralTag.BinOp;
-            ret.litteral.sort_bin_op = SortBinOperator.Function;
+            assert(0, "BinOpFunction conversion not to be implemented");
             break;
 
         case AstType.PattLitteral:
@@ -153,7 +160,12 @@ SemanticAst convert(ParseAst parse_ast) {
             ret.pattern.bin_op = new S_PatternBinOp;
             ret.pattern.bin_op.left = convert(pbo.left).pattern;
             ret.pattern.bin_op.right = convert(pbo.right).pattern;
-            ret.pattern.bin_op.operator = convert(pbo.binOp).litteral.patt_bin_op;
+            switch( pbo.binOp.ast_type ) {
+                case AstType.BinOpPair:
+                    ret.pattern.bin_op.operator = PattBinOperator.Pair;
+                    break;
+                default : assert(0,"Binop type expected");
+            }
             break;
         case AstType.PattEquality:
             PattEquality peq = parse_ast.ast.pattEquality;
@@ -181,30 +193,50 @@ SemanticAst convert(ParseAst parse_ast) {
             break;
 
         case AstType.FnBranchLast:
-            assert(0, "FnBranchLast not yet implemented");
+            assert(0, "FnBranchLast not to be implemented");
             break;
         case AstType.FnBranch:
-            assert(0, "FnBranch not yet implemented");
+            assert(0, "FnBranch not to be implemented");
             break;
         case AstType.Guard:
-            assert(0, "Guard not yet implemented");
+            assert(0, "Guard not to be implemented");
             break;
         case AstType.AndGuard:
-            assert(0, "AndGuard not yet implemented");
+            assert(0, "AndGuard not to be implemented");
             break;
         case AstType.OrGuard:
-            assert(0, "OrGuard not yet implemented");
+            assert(0, "OrGuard not to be implemented");
             break;
         case AstType.AndGuardEmpty:
-            assert(0, "AndGuardEmpty not yet implemented");
+            assert(0, "AndGuardEmpty not to be implemented");
             break;
         case AstType.OrGuardEmpty:
-            assert(0, "OrGuardEmpty not yet implemented");
+            assert(0, "OrGuardEmpty not to be implemented");
             break;
     }
     return ret;
 }
 
+/*
+template fold_ast(T) {
+    struct Fold_Ast_Utils {
+        T delegate(S_Sort, T) fold_sort;
+        T delegate(S_Pattern, T) fold_Pattern;
+        T delegate(S_Litteral, T) fold_litteral;
+    }
+
+    T fold_ast( SemanticAst ast, T acc, Fold_Ast_Utils fau) {
+        final switch( ast.tag ) {
+            case AstTag.Sort:
+                return fau.fold_sort(ast.sort, acc);
+            case AstTag.Pattern:
+                return fau.fold_pattern(ast.pattern, acc);
+            case AstTag.Litteral:
+                return fau.fold_litteral(ast.litteral, acc);
+        }
+    }
+}
+*/
 
 
 enum AstTag { Sort, Pattern, Litteral, }
@@ -268,7 +300,7 @@ Litteral :
     LitteralWord = WORD ;
     LitteralString = STR .
 */
-enum LitteralTag { Word, String, Number, Decimal, BinOp }
+enum LitteralTag { Word, String, Number, Decimal }
 struct S_Litteral {
     LitteralTag tag;
     union {
@@ -279,8 +311,6 @@ struct S_Litteral {
             string whole;
             string decimal;
         }
-        SortBinOperator sort_bin_op;
-        PattBinOperator patt_bin_op;
     }
 }
 
@@ -390,7 +420,6 @@ string format_semantic_litteral(S_Litteral litteral) {
             return litteral.number;
         case LitteralTag.Decimal:
             return litteral.whole ~ '.' ~  litteral.decimal;
-        case LitteralTag.BinOp: assert(0, "Imposssible to print litteral binop: lacking context (pattern|sort)");
     }
 }
 
