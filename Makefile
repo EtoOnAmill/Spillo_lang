@@ -1,7 +1,7 @@
 
 SRCD=./src
 OBJD=./build
-OBJ=$(OBJD)/lex.o $(OBJD)/parse.o $(OBJD)/parse_spillocore.o $(OBJD)/spillocore.o $(OBJD)/semantic_ast.o
+OBJ=$(OBJD)/lex.o $(OBJD)/parse.o $(OBJD)/parse_spillocore.o $(OBJD)/semantic_ast.o $(OBJD)/spillocore.o
 
 DC=dmd
 
@@ -23,7 +23,7 @@ $(OBJD)/parse_spillocore.o : $(SRCD)/parse.d $(SRCD)/parse_spillocore.d
 $(OBJD)/semantic_ast.o  : $(SRCD)/parse_spillocore.d $(SRCD)/semantic_ast.d
 	$(DC) $(DFLAGS) $(SRCD)/semantic_ast.d -of=$(OBJD)/semantic_ast.o
 
-$(OBJD)/spillocore.o : $(SRCD)/lex.d $(SRCD)/parse.d $(SRCD)/parse_spillocore.d $(SRCD)/spillocore.d
+$(OBJD)/spillocore.o : $(patsubst ./build/%.o,./src/%.d, $(OBJ))
 	$(DC) $(DFLAGS) $(SRCD)/spillocore.d -of=$(OBJD)/spillocore.o
 
 release :
