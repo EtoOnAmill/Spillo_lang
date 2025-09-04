@@ -72,9 +72,9 @@ SemanticAst convert(ParseAst parse_ast) {
             SortDepBind sdb = parse_ast.ast.sortDepBind;
             ret.tag = AstTag.Sort;
             ret.sort.tag = SortTag.DepBind;
-            ret.sort.depBind = new S_PattSort();
-            ret.sort.depBind.sort = convert(sdb.sort).sort;
-            ret.sort.depBind.pattern = convert(sdb.pattern).pattern;
+            ret.sort.dep_bind = new S_PattSort();
+            ret.sort.dep_bind.sort = convert(sdb.sort).sort;
+            ret.sort.dep_bind.pattern = convert(sdb.pattern).pattern;
             break;
         case AstType.SortLambda:
             ret.tag = AstTag.Sort;
@@ -193,51 +193,103 @@ SemanticAst convert(ParseAst parse_ast) {
             break;
 
         case AstType.FnBranchLast:
-            assert(0, "FnBranchLast not to be implemented");
+            assert(0, "FnBranchLast conversion not to be implemented");
             break;
         case AstType.FnBranch:
-            assert(0, "FnBranch not to be implemented");
+            assert(0, "FnBranch conversion not to be implemented");
             break;
         case AstType.Guard:
-            assert(0, "Guard not to be implemented");
+            assert(0, "Guard conversion not to be implemented");
             break;
         case AstType.AndGuard:
-            assert(0, "AndGuard not to be implemented");
+            assert(0, "AndGuard conversion not to be implemented");
             break;
         case AstType.OrGuard:
-            assert(0, "OrGuard not to be implemented");
+            assert(0, "OrGuard conversion not to be implemented");
             break;
         case AstType.AndGuardEmpty:
-            assert(0, "AndGuardEmpty not to be implemented");
+            assert(0, "AndGuardEmpty conversion not to be implemented");
             break;
         case AstType.OrGuardEmpty:
-            assert(0, "OrGuardEmpty not to be implemented");
+            assert(0, "OrGuardEmpty conversion not to be implemented");
             break;
     }
     return ret;
 }
 
-/*
 template fold_ast(T) {
-    struct Fold_Ast_Utils {
-        T delegate(S_Sort, T) fold_sort;
-        T delegate(S_Pattern, T) fold_Pattern;
-        T delegate(S_Litteral, T) fold_litteral;
+    struct Foldr_Ast_Utils {
+        T delegate(SortTag, T[], T accumulator) fold_sort;
+        T delegate(PattTag, T[], T accumulator) fold_pattern;
+        T delegate(S_Litteral, T accumulator) fold_litteral;
+        T delegate(T[], T accumulator) fold_branch;
+        T delegate(T[], T accumulator) fold_or_guard;
+        T delegate(T[], T accumulator) fold_and_guard;
     }
 
-    T fold_ast( SemanticAst ast, T acc, Fold_Ast_Utils fau) {
+    T foldr_ast( SemanticAst ast, T acc, Foldr_Ast_Utils fau ) {
         final switch( ast.tag ) {
-            case AstTag.Sort:
-                return fau.fold_sort(ast.sort, acc);
-            case AstTag.Pattern:
-                return fau.fold_pattern(ast.pattern, acc);
-            case AstTag.Litteral:
-                return fau.fold_litteral(ast.litteral, acc);
+            case AstTag.Sort: return foldr_sort(ast.sort, acc, fau );
+            case AstTag.Pattern: return foldr_pattern(ast.pattern, acc, fau );
+            case AstTag.Litteral: return foldr_litteral(ast.litteral, acc, fau);
         }
     }
+    T foldr_sort( S_Sort sort, T acc, Foldr_Ast_Utils fau ) {
+        T[] sub_acc;
+        final switch( sort.tag ) {
+            case SortTag.Litteral:
+                return fau.fold_litteral(sort.litteral, acc);
+            case SortTag.BinOp:
+                sub_acc ~= foldr_sort(sort.bin_op.left, acc, fau);
+                sub_acc ~= foldr_sort(sort.bin_op.right, acc, fau);
+                return fau.fold_sort(sort.tag, sub_acc, acc);
+            case SortTag.DepBind:
+                sub_acc ~= foldr_sort(sort.dep_bind.sort, acc, fau);
+                sub_acc ~= foldr_pattern(sort.dep_bind.pattern, acc, fau);
+                return fau.fold_sort(sort.tag, sub_acc, acc);
+            case SortTag.Lambda:
+                foreach(branch; sort.lambda.branches) {
+                    T[] branch_acc;
+                    foreach(or_branch; branch.or_guards) {
+                        T[] or_acc;
+                        or_acc ~= foldr_pattern(or_branch.pattern, acc, fau);
+                        foreach(and_branch; or_branch.and_guards) {
+                            T[] and_acc;
+                            and_acc ~= foldr_pattern(and_branch.pattern, acc, fau);
+                            and_acc ~= foldr_sort(and_branch.sort, acc, fau);
+                            or_acc ~= fau.fold_and_guard(and_acc, acc);
+                        }
+                        branch_acc ~= fau.fold_or_guard(or_acc, acc);
+                    }
+                    branch_acc ~= foldr_sort(branch.sort, acc, fau);
+                    sub_acc ~= fau.fold_branch(branch_acc, acc);
+                }
+                return fau.fold_sort(sort.tag, sub_acc, acc);
+        }
+    }
+    T foldr_pattern( S_Pattern pattern, T acc, Foldr_Ast_Utils fau ) {
+        T[] sub_acc;
+        final switch( pattern.tag ) {
+            case PattTag.Litteral:
+                return fau.fold_litteral(pattern.litteral, acc);
+            case PattTag.BinOp:
+                sub_acc ~= foldr_pattern(pattern.bin_op.left, acc, fau);
+                sub_acc ~= foldr_pattern(pattern.bin_op.right, acc, fau);
+                return fau.fold_pattern(pattern.tag, sub_acc, acc);
+            case PattTag.Sort:
+                return fau.fold_pattern(
+                    pattern.tag,
+                    [foldr_sort(pattern.sort, acc, fau)],
+                    acc);
+        }
+    }
+    T foldr_litteral( S_Litteral litteral, T acc, Foldr_Ast_Utils fau ) {
+        return fau.fold_litteral(litteral, acc);
+    }
 }
-*/
 
+
+alias debug_template = fold_ast!bool;
 
 enum AstTag { Sort, Pattern, Litteral, }
 struct SemanticAst {
@@ -263,7 +315,7 @@ struct S_Sort {
     union {
         S_Litteral litteral;
         S_SortBinOp *bin_op;
-        S_PattSort *depBind;
+        S_PattSort *dep_bind;
         S_Lambda *lambda;
     }
     S_Sort *type;
