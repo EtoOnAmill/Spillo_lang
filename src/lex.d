@@ -3,6 +3,38 @@ import std.algorithm;
 import std.stdio;
 import std.array;
 
+enum TokenSymbol : char {
+    Function = '^',
+    Apply = '!',
+    Recurse = '?',
+    Tuple = '%',
+    Pair = '/',
+
+    Lbr = '{',
+    Rbr = '}',
+    Lsq= '[',
+    Rsq= ']',
+    Lp= '(',
+    Rp= ')',
+    With = '>',
+    Done = '<',
+    String = '`',
+    Comment = '#',
+
+    And = '&',
+    Or = '|',
+    Do = ';',
+    When = '\\',
+
+    Eq = '=',
+    Of = ':',
+    Alt = '~',
+
+}
+string to_string(TokenSymbol ts) {
+    return "" ~ ts;
+}
+
 const char[] whitespace = [' ', '\t', '\n', '\v', '\r'];
 const char[] binOps = ['^', '!', '%', '/', '?'];
 const char[] delimeters = ['{', '}', '[', ']', '(', ')', '>', '<', '`', '#'];

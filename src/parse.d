@@ -185,7 +185,7 @@ ParsingTable generate_parsing_table(Grammar g) {
             [StateLineMetadata(Action.SHIFT, g.root)])
     ];
     g.add_production(g.eof, AstType.ROOT, [g.root]);
-    g.print_productions();
+    //g.print_productions();
 
 //---------------
     size_t state_to_shift_to(StateLine[] state_kernel) {
@@ -261,9 +261,9 @@ ParsingTable generate_parsing_table(Grammar g) {
     ParsingTable table;
 
     for(size_t curr_state_idx = 0; curr_state_idx < generated_states.length; curr_state_idx++) {
-        writeln(curr_state_idx);
+        //writeln(curr_state_idx);
         State curr_state = generated_states[curr_state_idx];
-        foreach(curr_line; curr_state.productions) { g.print_state_line(curr_line); }
+        //foreach(curr_line; curr_state.productions) { g.print_state_line(curr_line); }
 
         for(size_t idx = 0; idx < curr_state.metadatas.length; idx++) {
             StateLineMetadata metadata = curr_state.metadatas[idx];
@@ -274,7 +274,7 @@ ParsingTable generate_parsing_table(Grammar g) {
             foreach(prod_idx; prod_idxes) {
                 StateLine prod = StateLine(0, prod_idx, new_lookahead(g, state_line)); 
                 if(!curr_state.productions.canFind(prod)) {
-                    g.print_state_line(prod);
+                    //g.print_state_line(prod);
                     curr_state.productions ~= prod;
                     curr_state.metadatas ~= calculate_metadata(g, prod);
                 }
@@ -349,7 +349,7 @@ ParsingTable generate_parsing_table(Grammar g) {
         }
 
         
-        table[curr_state_idx].print();
+        //table[curr_state_idx].print();
     }
 
     return table;
@@ -396,7 +396,8 @@ loop:
         GrammarItem next_item = ast_u.to_grammar_item(next_item_processed);
         ParsingAction p_action = get_action(table, state_stack.back, next_item);
 
-        writeln
+/*
+writeln
             ( map!(e =>
                 ast_u.to_grammar_item(cast(AstNode)e).to!string
                 ~ "::"
@@ -410,8 +411,8 @@ loop:
             , '\t'
             , p_action
             , '\n', state_stack);
-
         writeln();
+*/
 
         final switch(p_action.action) {
             case Action.SHIFT:
