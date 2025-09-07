@@ -34,7 +34,7 @@ string fold_sort(SortTag tag, string[] leaf_fold) {
 string fold_pattern(PatternTag tag, string[] leaf_fold) {
     final switch ( tag ) {
         case PatternTag.Litteral:
-            return leaf_fold[0];
+            return leaf_fold.join(":");
         case PatternTag.BinOp:
             if( leaf_fold[2] == lex.to_string(TokenSymbol.Eq) ) {
                 return leaf_fold[0] ~ TokenSymbol.Eq ~ leaf_fold[1];

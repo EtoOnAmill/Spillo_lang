@@ -278,7 +278,11 @@ template fold_ast(T) {
         T[] sub_acc;
         final switch( pattern.tag ) {
             case PatternTag.Litteral:
-                return fau.fold_litteral(pattern.litteral);
+                sub_acc ~= fau.fold_litteral(pattern.litteral); 
+                if(pattern.type != null) {
+                    sub_acc ~= foldr_sort(*pattern.type, fau);
+                }
+                return fau.fold_pattern(pattern.tag, sub_acc);
             case PatternTag.BinOp:
                 sub_acc ~= foldr_pattern(pattern.bin_op.left, fau);
                 sub_acc ~= foldr_pattern(pattern.bin_op.right, fau);
