@@ -76,19 +76,19 @@ struct Token {
     }
 
     size_t offset() {
-        if(tt == TokenType.STRING) {
-            return value.length + 2;
+        if(this.tt == TokenType.STRING) {
+            return this.value.length + 2;
         }
-        return value.length;
+        return this.value.length;
     }
 
     Position new_position() {
-        string[] lines = splitter(value,"\n").array;
+        string[] lines = splitter(this.value,"\n").array;
         lines.length ? (lines=lines) : (lines=[""]);
         string lastLine = lines[$-1];
-        size_t newLine = pos.line + lines.length - 1; // -1 in case of no split
+        size_t newLine = this.pos.line + lines.length - 1; // -1 in case of no split
 
-        size_t columnOffset = newLine==pos.line ? pos.column : 1;
+        size_t columnOffset = newLine==this.pos.line ? this.pos.column : 1;
         size_t newColumn = columnOffset + lastLine.length;
         size_t delimeterOffset = {
             switch ( this.tt ) {

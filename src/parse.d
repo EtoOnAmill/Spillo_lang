@@ -1,4 +1,5 @@
 import std.stdio;
+import std.random;
 import std.range;
 import std.array;
 import std.algorithm;
@@ -36,10 +37,26 @@ struct Grammar {
 
         return this;
     }
+
+    GrammarItem[] generate_string(size_t depth, GrammarItem item) {
+        if(depth == 0) { return [item]; }
+        if( is_intermediate(item) ) {
+            GrammarItem[][] intermediate_productions =
+                iota(0, this.intermediates.length)
+                .filter!( i => this.intermediates[i]==item)
+                .map!(i => this.productions[i]).array;
+            size_t intermediate_idx = uniform(0, intermediate_productions.length);
+            GrammarItem[] production = intermediate_productions[intermediate_idx];
+            return production.map!(
+                e => this.generate_string(depth-1, e)
+            ).join();
+        } else {
+            return [item];
+        }
+
+    }
+
 }
-
-
-
 bool is_intermediate(Grammar g, GrammarItem item) {
     if(item == g.eof) return false;
     foreach(GrammarItem intermediate; g.intermediates) {

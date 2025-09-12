@@ -178,7 +178,7 @@ SemanticAst convert(ParseAst parse_ast) {
             ret.pattern.bin_op = new S_PatternBinOp;
             ret.pattern.bin_op.left = convert(peq.pattern).pattern;
             ret.pattern.bin_op.right = convert(peq.pattern_unit).pattern;
-            ret.pattern.bin_op.operator = PattBinOperator.Equality;
+            ret.pattern.bin_op.operator = PattBinOperator.Eq;
             break; }
         case AstType.PattAlternative: {
             ret.tag = AstTag.Pattern;
@@ -231,6 +231,7 @@ template fold_ast(T) {
         T function(T[]) fold_and_guard;
         T function(PattBinOperator) fold_patt_bin_operator;
         T function(SortBinOperator) fold_sort_bin_operator;
+        T function(SemanticAst) fold_incomplete;
     }
 
     T foldr_ast( SemanticAst ast, Foldr_Ast_Utils fau ) {
@@ -238,6 +239,7 @@ template fold_ast(T) {
             case AstTag.Sort: return foldr_sort(ast.sort, fau );
             case AstTag.Pattern: return foldr_pattern(ast.pattern, fau );
             case AstTag.Litteral: return foldr_litteral(ast.litteral, fau);
+            case AstTag.Incomplete: return fau.fold_incomplete(ast);
         }
     }
     T foldr_sort( S_Sort sort, Foldr_Ast_Utils fau ) {
@@ -302,7 +304,7 @@ template fold_ast(T) {
 
 alias debug_template = fold_ast!bool;
 
-enum AstTag : short { Sort, Pattern, Litteral, }
+enum AstTag : short { Sort, Pattern, Litteral, Incomplete }
 struct SemanticAst {
     AstTag tag;
     union {
@@ -396,7 +398,7 @@ struct S_SortBinOp {
     S_Sort left;
     S_Sort right;
 }
-enum PattBinOperator : char { Pair = TokenSymbol.Pair, Equality = TokenSymbol.Eq, }
+enum PattBinOperator : char { Pair = TokenSymbol.Pair, Eq = TokenSymbol.Eq, }
 struct S_PatternBinOp {
     PattBinOperator operator;
     S_Pattern left;
@@ -462,7 +464,7 @@ string format_semantic_pattern(S_Pattern pattern) {
                     ret ~= format_semantic_pattern(pattern.bin_op.right);
                     ret ~= '/';
                     break;
-                case PattBinOperator.Equality:
+                case PattBinOperator.Eq:
                     ret = format_semantic_pattern(pattern.bin_op.left);
                     ret ~= "=(";
                     ret ~= format_semantic_pattern(pattern.bin_op.right);

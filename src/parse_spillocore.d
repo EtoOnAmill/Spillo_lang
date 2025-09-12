@@ -300,6 +300,7 @@ void print_ast_node(ParseAst node, size_t indentation) {
 
     size_t new_indent = indentation + 1;
 
+    if( node.ast == null ) { return; }
     final switch(node.ast_type) {
         case AstType.SortLitteral:
             print_ast_node(node.ast.sortLitteral.value, new_indent);
