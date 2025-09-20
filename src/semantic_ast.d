@@ -3,9 +3,44 @@ import parse_spillocore;
 
 SemanticAst convert(ParseAst parse_ast) {
     SemanticAst ret;
+    if( parse_ast.ast == null ) {
+        AstTag calculated_tag = ast_tag_from_Grammar_Item(parse_ast.type);
+        ret.tag = calculated_tag;
+        final switch( calculated_tag ) {
+            case AstTag.Sort:
+                ret.sort.tag = SortTag.Incomplete;
+                break;
+            case AstTag.Pattern:
+                ret.pattern.tag = PatternTag.Incomplete;
+                break;
+            case AstTag.Litteral:
+                ret.tag = AstTag.Litteral;
+                switch(parse_ast.ast_type){
+                    case AstType.LitteralWord:
+                        ret.litteral.tag = LitteralTag.Word;
+                        break;
+                    case AstType.LitteralString:
+                        ret.litteral.tag = LitteralTag.String;
+                        break;
+                    case AstType.LitteralNumber:
+                        ret.litteral.tag = LitteralTag.Number;
+                        break;
+                    case AstType.LitteralDecimal:
+                        ret.litteral.tag = LitteralTag.Decimal;
+                        break;
+                    case AstType.TERMINAL:
+                        ret.litteral.tag = LitteralTag.Incomplete;
+                        break;
+                    default:
+                        assert(0, "Expected an AstType litteral");
+                }
+                break;
+    }
+        return ret;
+    }
     final switch(parse_ast.ast_type){
 
-        case AstType.TERMINAL: assert(0, "Unreachable code, converting terminal simbol to SemanticAst");
+        case AstType.TERMINAL: assert(0, "Unreachable code, converting terminal symbol to SemanticAst\n");
         case AstType.ROOT: ret = convert(parse_ast.ast.root.root); break;
 
         case AstType.LitteralWord: {
@@ -66,6 +101,9 @@ SemanticAst convert(ParseAst parse_ast) {
                 case AstType.BinOpFunction: {
                     ret.sort.bin_op.operator = SortBinOperator.Function;
                     break; }
+                case AstType.TERMINAL:
+                    ret.sort.bin_op.operator = SortBinOperator.SortBinOp;
+                    break;
                 default : assert(0,"Binop type expected");
             }
             break; }
@@ -84,45 +122,55 @@ SemanticAst convert(ParseAst parse_ast) {
             S_Branch[] branches = [];
 
             ParseAst curr_branch = parse_ast.ast.sortLambda.fnBranch;
-            while( true ) {
-                S_Guard[] or_guards = [];
 
-                ParseAstData* tmp_guard = new ParseAstData();
-                tmp_guard.orGuard = OrGuard(curr_branch.ast.fnBranch.guard);
-                ParseAst curr_or_ast = ParseAst(GrammarItems.Orguard, AstType.OrGuard, tmp_guard);
-                while( curr_or_ast.ast_type == AstType.OrGuard ) {
-                    OrGuard curr_or = curr_or_ast.ast.orGuard;
-                    Guard curr_guard = curr_or.guard.ast.guard;
-
-                    S_PattSort[] and_guards = [];
-
-                    ParseAst curr_and_ast = curr_guard.and;
-                    while ( curr_and_ast.ast_type == AstType.AndGuard ) {
-                        AndGuard curr_and = curr_and_ast.ast.andGuard;
-
-                        S_Pattern and_patt = convert(curr_and.pattern).pattern;
-                        S_Sort sort = convert(curr_and.sort).sort;
-
-                        and_guards ~= S_PattSort(and_patt, sort);
-
-                        curr_and_ast = curr_and.and_guard;
-                    }
-
-                    S_Pattern or_patt = convert(curr_guard.pattern).pattern;
-
-                    or_guards ~= S_Guard(or_patt, and_guards);
-
-                    // the ParseAst OrGuard is just a semantic separation of the base case (Patt And Or) and the looping (or Patt And Or)
-                    curr_or_ast = curr_guard.or;
+            S_Guard make_guard(ParseAst guard) {
+                switch(guard.ast_type){
+                    case AstType.Guard:
+                        return S_Guard(
+                        convert(guard.ast.guard.pattern).pattern,
+                        null );
+                    case AstType.GuardAnd:
+                        return S_Guard(
+                        convert(guard.ast.guardAnd.pattern).pattern,
+                        new S_PattSort(
+                            convert(guard.ast.guardAnd.and_pattern).pattern,
+                            convert(guard.ast.guardAnd.and_sort).sort ),
+                        );
+                    case AstType.TERMINAL:
+                        return S_Guard(S_Pattern(PatternTag.Incomplete));
+                    default: return S_Guard();
                 }
-
-                S_Sort branch_sort = convert(curr_branch.ast.fnBranch.sort).sort;
-
-                branches ~= S_Branch(or_guards, branch_sort);
-
-                if ( curr_branch.ast_type == AstType.FnBranch ) {
-                    curr_branch = curr_branch.ast.fnBranch.branch;
-                } else { break; }
+            }
+loop:
+            while( true ) {
+                switch(curr_branch.ast_type) {
+                    case AstType.FnBranchLast:
+                        S_Guard guard =
+                            make_guard(curr_branch.ast.fnBranchLast.guard);
+                        S_Sort sort =
+                            convert(curr_branch.ast.fnBranchLast.sort).sort;
+                        branches ~= S_Branch(guard, sort);
+                        break loop;
+                    case AstType.FnBranch:
+                        S_Guard guard =
+                            make_guard(curr_branch.ast.fnBranch.guard);
+                        S_Sort sort =
+                            convert(curr_branch.ast.fnBranch.sort).sort;
+                        branches ~= S_Branch(guard, sort);
+                        curr_branch = curr_branch.ast.fnBranch.branch;
+                        break;
+                    case AstType.TERMINAL:
+                        /*
+                        S_Guard guard =
+                            S_Guard(S_Pattern(PatternTag.Incomplete), null);
+                        S_Sort sort =
+                            S_Sort(SortTag.Incomplete);
+                        */
+                        branches ~= S_Branch();
+                        break loop;
+                    default:
+                        break;
+                }
             }
 
             ret.sort.lambda = new S_Lambda(branches);
@@ -168,6 +216,14 @@ SemanticAst convert(ParseAst parse_ast) {
                 case AstType.BinOpPair: {
                     ret.pattern.bin_op.operator = PattBinOperator.Pair;
                     break; }
+                // Neither of these is a Pattern Bin Operator
+                case AstType.BinOpTuple: 
+                case AstType.BinOpRecurse: 
+                case AstType.BinOpApply: 
+                case AstType.BinOpFunction: 
+                case AstType.TERMINAL :
+                    ret.pattern.bin_op.operator = PattBinOperator.PatternBinOp;
+                    break;
                 default : assert(0,"Binop type expected");
             }
             break; }
@@ -205,21 +261,56 @@ SemanticAst convert(ParseAst parse_ast) {
         case AstType.Guard: {
             assert(0, "Guard conversion not to be implemented");
             break; }
-        case AstType.AndGuard: {
-            assert(0, "AndGuard conversion not to be implemented");
-            break; }
-        case AstType.OrGuard: {
-            assert(0, "OrGuard conversion not to be implemented");
-            break; }
-        case AstType.AndGuardEmpty: {
-            assert(0, "AndGuardEmpty conversion not to be implemented");
-            break; }
-        case AstType.OrGuardEmpty: {
-            assert(0, "OrGuardEmpty conversion not to be implemented");
+        case AstType.GuardAnd: {
+            assert(0, "Guard conversion not to be implemented");
             break; }
     }
     return ret;
 }
+
+
+AstTag ast_tag_from_Grammar_Item(GrammarItems item) {
+    final switch( item ) {
+        case GrammarItems.Sortunit:
+        case GrammarItems.Sort:
+            return AstTag.Sort;
+        case GrammarItems.Pattunit:
+        case GrammarItems.Typelesspatt:
+        case GrammarItems.Patt:
+            return AstTag.Pattern;
+        case GrammarItems.WORD:
+        case GrammarItems.NUM:
+        case GrammarItems.STR:
+        case GrammarItems.Litteral:
+            return AstTag.Litteral;
+        case GrammarItems.EOF:
+        case GrammarItems.Invalid:
+        case GrammarItems.BinOp:
+        case GrammarItems.EMPTY:
+        case GrammarItems.With:
+        case GrammarItems.Fnbranch:
+        case GrammarItems.Done:
+        case GrammarItems.Of:
+        case GrammarItems.Pair:
+        case GrammarItems.Tuple:
+        case GrammarItems.Function:
+        case GrammarItems.Apply:
+        case GrammarItems.Recurse:
+        case GrammarItems.Alt:
+        case GrammarItems.Equal:
+        case GrammarItems.Do:
+        case GrammarItems.When:
+        case GrammarItems.Guard:
+        case GrammarItems.Dot:
+        case GrammarItems.Lp:
+        case GrammarItems.Rp:
+        case GrammarItems.And:
+            assert(0, "Cannot make AstTag of non Sort/Pattern/Litteral grammar items");
+
+//        default:
+    }
+}
+
 
 template fold_ast(T) {
     struct Foldr_Ast_Utils {
@@ -227,11 +318,8 @@ template fold_ast(T) {
         T function(PatternTag, T[]) fold_pattern;
         T function(S_Litteral) fold_litteral;
         T function(T[]) fold_branch;
-        T function(T[]) fold_or_guard;
-        T function(T[]) fold_and_guard;
         T function(PattBinOperator) fold_patt_bin_operator;
         T function(SortBinOperator) fold_sort_bin_operator;
-        T function(SemanticAst) fold_incomplete;
     }
 
     T foldr_ast( SemanticAst ast, Foldr_Ast_Utils fau ) {
@@ -239,12 +327,13 @@ template fold_ast(T) {
             case AstTag.Sort: return foldr_sort(ast.sort, fau );
             case AstTag.Pattern: return foldr_pattern(ast.pattern, fau );
             case AstTag.Litteral: return foldr_litteral(ast.litteral, fau);
-            case AstTag.Incomplete: return fau.fold_incomplete(ast);
         }
     }
     T foldr_sort( S_Sort sort, Foldr_Ast_Utils fau ) {
         T[] sub_acc;
         final switch( sort.tag ) {
+            case SortTag.Incomplete:
+                return fau.fold_sort(sort.tag, []);
             case SortTag.Litteral:
                 return fau.fold_litteral(sort.litteral);
             case SortTag.BinOp:
@@ -257,18 +346,17 @@ template fold_ast(T) {
                 sub_acc ~= foldr_pattern(sort.dep_bind.pattern, fau);
                 return fau.fold_sort(sort.tag, sub_acc);
             case SortTag.Lambda:
-                foreach(branch; sort.lambda.branches) {
-                    T[] branch_acc;
-                    foreach(or_branch; branch.or_guards) {
-                        T[] or_acc;
-                        or_acc ~= foldr_pattern(or_branch.pattern, fau);
-                        foreach(and_branch; or_branch.and_guards) {
-                            T[] and_acc;
-                            and_acc ~= foldr_pattern(and_branch.pattern, fau);
-                            and_acc ~= foldr_sort(and_branch.sort, fau);
-                            or_acc ~= fau.fold_and_guard(and_acc);
-                        }
-                        branch_acc ~= fau.fold_or_guard(or_acc);
+                foreach(branch; sort.lambda.branches){
+                    T[] branch_acc = [];
+                    if( branch == S_Branch() ) {
+                        sub_acc ~= fau.fold_branch([]);
+                        continue;
+                    }
+                    S_Guard guard = branch.guard;
+                    branch_acc ~= foldr_pattern(guard.pattern, fau);
+                    if(guard.and_guard != null) {
+                        branch_acc ~= foldr_pattern(guard.and_guard.pattern, fau);
+                        branch_acc ~= foldr_sort(guard.and_guard.sort, fau);
                     }
                     branch_acc ~= foldr_sort(branch.sort, fau);
                     sub_acc ~= fau.fold_branch(branch_acc);
@@ -279,6 +367,8 @@ template fold_ast(T) {
     T foldr_pattern( S_Pattern pattern, Foldr_Ast_Utils fau ) {
         T[] sub_acc;
         final switch( pattern.tag ) {
+            case PatternTag.Incomplete:
+                return fau.fold_pattern(pattern.tag, []);
             case PatternTag.Litteral:
                 sub_acc ~= fau.fold_litteral(pattern.litteral); 
                 if(pattern.type != null) {
@@ -304,7 +394,7 @@ template fold_ast(T) {
 
 alias debug_template = fold_ast!bool;
 
-enum AstTag : short { Sort, Pattern, Litteral, Incomplete }
+enum AstTag : short { Sort, Pattern, Litteral }
 struct SemanticAst {
     AstTag tag;
     union {
@@ -322,7 +412,7 @@ Sort :
     SortLambda = With Fnbranch Done ;
     SortDepBind = Sort Of Of Pattunit ;
 */
-enum SortTag : short { Litteral, BinOp, DepBind, Lambda, }
+enum SortTag : short { Litteral, BinOp, DepBind, Lambda, Incomplete }
 struct S_Sort {
     SortTag tag;
     union {
@@ -345,7 +435,7 @@ Typelesspatt :
     PattEquality = Patt Equal Pattunit ;
     PattBinOp = Patt Patt BinOp EMPTY .
 */
-enum PatternTag : short { Litteral, BinOp, Sort, }
+enum PatternTag : short { Litteral, BinOp, Sort, Incomplete }
 struct S_Pattern {
     PatternTag tag;
     union {
@@ -365,7 +455,7 @@ Litteral :
     LitteralWord = WORD ;
     LitteralString = STR .
 */
-enum LitteralTag : short { Word, String, Number, Decimal }
+enum LitteralTag : short { Word, String, Number, Decimal, Incomplete }
 struct S_Litteral {
     LitteralTag tag;
     union {
@@ -392,13 +482,14 @@ enum SortBinOperator : char {
     Tuple = TokenSymbol.Tuple,
     Function = TokenSymbol.Function,
     Apply = TokenSymbol.Apply,
-    Recurse = TokenSymbol.Recurse, }
+    Recurse = TokenSymbol.Recurse,
+    SortBinOp = '*', }
 struct S_SortBinOp {
     SortBinOperator operator;
     S_Sort left;
     S_Sort right;
 }
-enum PattBinOperator : char { Pair = TokenSymbol.Pair, Eq = TokenSymbol.Eq, }
+enum PattBinOperator : char { Pair = TokenSymbol.Pair, Eq = TokenSymbol.Eq, PatternBinOp='*' }
 struct S_PatternBinOp {
     PattBinOperator operator;
     S_Pattern left;
@@ -424,12 +515,12 @@ struct S_Lambda {
     S_Branch[] branches;
 }
 struct S_Branch {
-    S_Guard[] or_guards;
+    S_Guard guard;
     S_Sort sort;
 }
 struct S_Guard {
     S_Pattern pattern;
-    S_PattSort[] and_guards;
+    S_PattSort* and_guard;
 }
 
 
@@ -453,16 +544,23 @@ string format_semantic_sort(S_Sort sort) {
 string format_semantic_pattern(S_Pattern pattern) {
     string ret;
     final switch(pattern.tag) {
-
+        case PatternTag.Incomplete:
+            return "Pattern";
         case PatternTag.Litteral:
             return format_semantic_litteral(pattern.litteral);
         case PatternTag.BinOp:
             final switch(pattern.bin_op.operator) {
+                case PattBinOperator.PatternBinOp:
+                    ret = format_semantic_pattern(pattern.bin_op.left);
+                    ret ~= ' ';
+                    ret ~= format_semantic_pattern(pattern.bin_op.right);
+                    ret ~= PattBinOperator.PatternBinOp;
+                    break;
                 case PattBinOperator.Pair:
                     ret = format_semantic_pattern(pattern.bin_op.left);
                     ret ~= ' ';
                     ret ~= format_semantic_pattern(pattern.bin_op.right);
-                    ret ~= '/';
+                    ret ~= PattBinOperator.Pair;
                     break;
                 case PattBinOperator.Eq:
                     ret = format_semantic_pattern(pattern.bin_op.left);
@@ -482,6 +580,8 @@ string format_semantic_pattern(S_Pattern pattern) {
 }
 string format_semantic_litteral(S_Litteral litteral) {
     final switch(litteral.tag) {
+        case LitteralTag.Incomplete:
+            return "Litteral";
         case LitteralTag.Word:
             return litteral.word;
         case LitteralTag.String:

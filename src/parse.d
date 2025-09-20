@@ -40,7 +40,7 @@ struct Grammar {
 
     GrammarItem[] generate_string(size_t depth, GrammarItem item) {
         if(depth == 0) { return [item]; }
-        if( is_intermediate(item) ) {
+        if( this.is_intermediate(item) ) {
             GrammarItem[][] intermediate_productions =
                 iota(0, this.intermediates.length)
                 .filter!( i => this.intermediates[i]==item)

@@ -35,13 +35,8 @@ Fnbranch :
     FnBranch = Guard Do Sort When Fnbranch .
 
 Guard :
-    Guard = Patt Andguard Orguard .
-Andguard :
-    AndGuardEmpty = ;
-    AndGuard = And Patt Of Equal Sort Andguard .
-Orguard :
-    OrGuardEmpty = ;
-    OrGuard = Or Guard .
+    Guard = Patt ;
+    GuardAnd = Patt And Patt Of Equal Sort .
 
 Litteral : 
     LitteralNumber = NUM ;
@@ -84,7 +79,7 @@ GrammarItems string_to_grammar_item(string s) {
         case "\\": case "when": return GrammarItems.When;
         case "<": case "done":  return GrammarItems.Done;
         case "&": case "and":  return GrammarItems.And;
-        case "|": case "or":  return GrammarItems.Or;
+//        case "|": case "or":  return GrammarItems.Or;
         case "~": case "alt":  return GrammarItems.Alt;
         case ".": case "dot":  return GrammarItems.Dot;
         case "": case "EMPTY":  return GrammarItems.EMPTY;
@@ -150,8 +145,13 @@ ParseAst reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, ParseAst[] it
         ret.ast = items[0].ast; break;
     case AstType.LitteralDecimal:
         ret.ast.litteralDecimal = LitteralDecimal(
-            items[0].ast.litteralNumber.value,
-            items[2].ast.litteralNumber.value);
+            items[0].ast
+            ? items[0].ast.litteralNumber.value
+            : "NUM",
+            items[2].ast
+            ? items[2].ast.litteralNumber.value
+            : "NUM",
+        );
         break;
 
     case AstType.PattLitteral: ret.ast.pattLitteral = PattLitteral(items[0]); break;
@@ -180,11 +180,8 @@ ParseAst reduce(GrammarTinstance.Grammar grammar, size_t prod_idx, ParseAst[] it
     case AstType.FnBranchLast: ret.ast.fnBranchLast = FnBranchLast(items[0], items[2]); break;
     case AstType.FnBranch: ret.ast.fnBranch = FnBranch(items[0], items[2], items[4]); break;
 
-    case AstType.Guard: ret.ast.guard = Guard(items[0], items[1], items[2]); break;
-    case AstType.AndGuard: ret.ast.andGuard = AndGuard(items[0], items[1], items[3]); break;
-    case AstType.OrGuard: ret.ast.orGuard = OrGuard(items[1]); break;
-    case AstType.AndGuardEmpty: ret.ast.andGuardEmpty = AndGuardEmpty(); break;
-    case AstType.OrGuardEmpty: ret.ast.orGuardEmpty = OrGuardEmpty(); break;
+    case AstType.Guard: ret.ast.guard = Guard(items[0]); break;
+    case AstType.GuardAnd: ret.ast.guardAnd = GuardAnd(items[0], items[2], items[5]); break;
     }
 
     return ret;
@@ -216,10 +213,7 @@ union ParseAstData {
     FnBranch fnBranch;
 
     Guard guard;
-    AndGuardEmpty andGuardEmpty;
-    AndGuard andGuard;
-    OrGuardEmpty orGuardEmpty;
-    OrGuard orGuard;
+    GuardAnd guardAnd;
 
     LitteralNumber litteralNumber;
     LitteralDecimal litteralDecimal;
@@ -258,11 +252,8 @@ struct PattBinOp { ParseAst left; ParseAst right; ParseAst binOp; }
 struct FnBranchLast { ParseAst guard; ParseAst sort; }
 struct FnBranch { ParseAst guard; ParseAst sort; ParseAst branch; }
 
-struct Guard { ParseAst pattern; ParseAst and; ParseAst or; }
-struct AndGuardEmpty {}
-struct AndGuard { ParseAst pattern; ParseAst sort; ParseAst and_guard; }
-struct OrGuardEmpty {}
-struct OrGuard { ParseAst guard; }
+struct Guard { ParseAst pattern; }
+struct GuardAnd { ParseAst pattern; ParseAst and_pattern; ParseAst and_sort; }
 
 struct LitteralNumber { string value; }
 struct LitteralDecimal { string whole; string decimal; }
@@ -370,19 +361,12 @@ void print_ast_node(ParseAst node, size_t indentation) {
             break;
         case AstType.Guard:
             print_ast_node(node.ast.guard.pattern, new_indent);
-            print_ast_node(node.ast.guard.and, new_indent);
-            print_ast_node(node.ast.guard.or, new_indent);
             break;
-        case AstType.AndGuard:
-            print_ast_node(node.ast.andGuard.pattern, new_indent);
-            print_ast_node(node.ast.andGuard.sort, new_indent);
-            print_ast_node(node.ast.andGuard.and_guard, new_indent);
+        case AstType.GuardAnd:
+            print_ast_node(node.ast.guardAnd.pattern, new_indent);
+            print_ast_node(node.ast.guardAnd.and_pattern, new_indent);
+            print_ast_node(node.ast.guardAnd.and_sort, new_indent);
             break;
-        case AstType.OrGuard:
-            print_ast_node(node.ast.orGuard.guard, new_indent);
-            break;
-        case AstType.AndGuardEmpty: break;
-        case AstType.OrGuardEmpty: break;
         case AstType.LitteralNumber:
             write_indent(new_indent);
             write("Litteral Number : ");
